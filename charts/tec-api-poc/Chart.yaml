@@ -1,0 +1,12 @@
+apiVersion: v2
+appVersion: "1.0"
+description: A Helm chart for tec-api-poc App
+name: tec-api-poc
+home: https://github.com/hmcts/tec-api-poc
+version: 0.0.18
+maintainers:
+  - name: HMCTS tec team
+dependencies:
+  - name: java
+    version: 5.3.0
+    repository: 'oci://hmctspublic.azurecr.io/helm' 
