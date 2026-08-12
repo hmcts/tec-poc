@@ -1,73 +1,53 @@
 #!/usr/bin/env sh
 
 print_help() {
-  echo "Script to run docker containers for Spring Boot Template API service
+  echo "Build and run the local TEC API POC Docker stack
 
   Usage:
 
-  ./run-in-docker.sh [OPTIONS]
+  ./run-in-docker.sh [OPTION]
 
   Options:
-    --clean, -c                   Clean and install current state of source code
-    --install, -i                 Install current state of source code
-    --param PARAM=, -p PARAM=     Parse script parameter
+    --clean, -c                   Clean before assembling the application
     --help, -h                    Print this help block
-
-  Available parameters:
-
   "
 }
 
 # script execution flags
 GRADLE_CLEAN=false
-GRADLE_INSTALL=false
 
-# TODO custom environment variables application requires.
-# TODO also consider enlisting them in help string above ^
-# TODO sample: DB_PASSWORD   Defaults to 'dev'
-# environment variables
-#DB_PASSWORD=dev
-#S2S_URL=localhost
-#S2S_SECRET=secret
+if docker compose version >/dev/null 2>&1
+then
+  compose() { docker compose "$@"; }
+elif command -v docker-compose >/dev/null 2>&1
+then
+  compose() { docker-compose "$@"; }
+else
+  echo "Docker Compose is required" >&2
+  exit 1
+fi
 
 execute_script() {
-  cd $(dirname "$0")/..
+  cd "$(dirname "$0")/.." || exit 1
 
-  if [ ${GRADLE_CLEAN} = true ]
+  if [ "${GRADLE_CLEAN}" = true ]
   then
     echo "Clearing previous build.."
     ./gradlew clean
   fi
 
-  if [ ${GRADLE_INSTALL} = true ]
-  then
-    echo "Assembling distribution.."
-    ./gradlew assemble
-  fi
-
-#  echo "Assigning environment variables.."
-#
-#  export DB_PASSWORD=${DB_PASSWORD}
-#  export S2S_URL=${S2S_URL}
-#  export S2S_SECRET=${S2S_SECRET}
+  echo "Assembling distribution.."
+  ./gradlew assemble
 
   echo "Bringing up docker containers.."
 
-  docker compose up
+  compose up --build
 }
 
 while true ; do
   case "$1" in
     -h|--help) print_help ; shift ; break ;;
-    -c|--clean) GRADLE_CLEAN=true ; GRADLE_INSTALL=true ; shift ;;
-    -i|--install) GRADLE_INSTALL=true ; shift ;;
-    -p|--param)
-      case "$2" in
-#        DB_PASSWORD=*) DB_PASSWORD="${2#*=}" ; shift 2 ;;
-#        S2S_URL=*) S2S_URL="${2#*=}" ; shift 2 ;;
-#        S2S_SECRET=*) S2S_SECRET="${2#*=}" ; shift 2 ;;
-        *) shift 2 ;;
-      esac ;;
+    -c|--clean) GRADLE_CLEAN=true ; shift ;;
     *) execute_script ; break ;;
   esac
 done

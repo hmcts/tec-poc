@@ -1,0 +1,8 @@
+.git
+.gradle
+.idea
+out
+build/*
+!build/libs/
+build/libs/*
+!build/libs/tec-api-poc.jar

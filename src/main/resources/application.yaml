@@ -2,14 +2,13 @@ server:
   port: 8080
   shutdown: "graceful"
 
-# If you use a database then uncomment the `group:, readiness: and include: "db"` lines in the health probes and uncomment the datasource section
 management:
   endpoint:
     health:
       show-details: "always"
-      # group:
-      #  readiness:
-      #   include: "db"
+      group:
+        readiness:
+          include: "db"
   endpoints:
     web:
       base-path: /
@@ -21,32 +20,23 @@ springdoc:
   writer-with-order-by-keys: true
 
 spring:
-  config:
-    import: "optional:configtree:/mnt/secrets/tec/"
   application:
-    name: Spring Boot Template
-#  datasource:
-#    driver-class-name: org.postgresql.Driver
-#    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}${DB_OPTIONS:}
-#    username: ${DB_USER_NAME}
-#    password: ${DB_PASSWORD}
-#    properties:
-#      charSet: UTF-8
-#    hikari:
-#      minimumIdle: 2
-#      maximumPoolSize: 10
-#      idleTimeout: 10000
-#      poolName: {to-be-defined}HikariCP
-#      maxLifetime: 7200000
-#      connectionTimeout: 30000
-#  jpa:
-#    properties:
-#      hibernate:
-#        jdbc:
-#          lob:
-#            # silence the 'wall-of-text' - unnecessary exception throw about blob types
-#            non_contextual_creation: true
+    name: TEC API POC
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tec}${DB_OPTIONS:}
+    username: ${DB_USER_NAME:tec}
+    password: ${DB_PASSWORD:tec}
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      idle-timeout: 10000
+      pool-name: TecPocHikariCP
+      max-lifetime: 7200000
+      connection-timeout: 30000
+  flyway:
+    enabled: true
 
-azure:
-  application-insights:
-    instrumentation-key: ${tec.AppInsightsInstrumentationKey:00000000-0000-0000-0000-000000000000}
+idam:
+  api:
+    url: ${IDAM_API_URL:http://localhost:5000}

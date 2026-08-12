@@ -1,88 +1,72 @@
-# tec-api-poc
+# TEC API POC
 
-## Building and deploying the application
+This is a local-only proof of concept. It is not deployed or published to any environment. Docker Compose is the only
+supported runtime and supplies the API and its PostgreSQL database.
 
-### Building the application
+## Prerequisites
 
-The project uses [Gradle](https://gradle.org) as a build tool. It already contains
-`./gradlew` wrapper script, so there's no need to install gradle.
+- Java 21
+- Docker with Docker Compose V2
 
-To build the project execute the following command:
+Gradle is provided by the checked-in `./gradlew` wrapper.
 
-```bash
-  ./gradlew build
-```
+## Run the local stack
 
-### Running the application
-
-Create the image of the application by executing the following command:
-
-```bash
-  ./gradlew assemble
-```
-
-Note: Docker Compose V2 is highly recommended for building and running the application.
-In the Compose V2 old `docker-compose` command is replaced with `docker compose`.
-
-Create docker image:
-
-```bash
-  docker compose build
-```
-
-Run the distribution (created in `build/install/tec-api-poc` directory)
-by executing the following command:
-
-```bash
-  docker compose up
-```
-
-This will start the API container exposing the application's port
-(set to `8080` in this template app).
-
-In order to test if the application is up, you can call its health endpoint:
-
-```bash
-  curl http://localhost:8080/health
-```
-
-You should get a response similar to this:
-
-```
-  {"status":"UP","diskSpace":{"status":"UP","total":249644974080,"free":137188298752,"threshold":10485760}}
-```
-
-### Alternative script to run application
-
-To skip all the setting up and building, just execute the following command:
+Build the application and start PostgreSQL and the API:
 
 ```bash
 ./bin/run-in-docker.sh
 ```
 
-For more information:
+The local services are:
+
+- API: http://localhost:8080
+- Health: http://localhost:8080/health
+- PostgreSQL: `localhost:5432`, database/user/password `tec`
+
+Stop the stack while retaining database data (use `docker-compose` instead if Compose is installed as a standalone
+command):
 
 ```bash
-./bin/run-in-docker.sh -h
+docker compose down
 ```
 
-Script includes bare minimum environment variables necessary to start api instance. Whenever any variable is changed or any other script regarding docker image/container build, the suggested way to ensure all is cleaned up properly is by this command:
+Delete the containers and all local database data:
 
 ```bash
-docker compose rm
+docker compose down -v
 ```
 
-It clears stopped containers correctly. Might consider removing clutter of images too, especially the ones fiddled with:
+## CCD Config Generator
+
+The project uses `hmcts.ccd.sdk` 6.32.0 with its decentralised PostgreSQL runtime. Elasticsearch runtime indexing is
+disabled. Start PostgreSQL before generating CCD configuration:
 
 ```bash
-docker images
-
-docker image rm <image-id>
+docker compose up -d postgres
+./gradlew generateCCDConfig
 ```
 
-There is no need to remove postgres and java or similar core images.
+Output is written to `build/ccd-definition`. No case-type files are currently produced because this integration slice
+does not define a TEC `CCDConfig`, case model, events, states, or roles.
+
+## Tests
+
+Run unit and integration checks (integration tests use a temporary PostgreSQL Testcontainer):
+
+```bash
+./gradlew clean check
+```
+
+With the Compose stack running, exercise the tests that call the live local API:
+
+```bash
+./gradlew functional smoke
+```
+
+IDAM is represented by a placeholder local URL and is not called during startup. No Helm chart, Terraform,
+Elasticsearch, cloud secrets, image publication, or deployment environment is supported by this repository.
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
-

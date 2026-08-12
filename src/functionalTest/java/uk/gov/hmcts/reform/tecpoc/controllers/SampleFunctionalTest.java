@@ -1,32 +1,20 @@
 package uk.gov.hmcts.reform.tecpoc.controllers;
 
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import static io.restassured.RestAssured.given;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 class SampleFunctionalTest {
     protected static final String CONTENT_TYPE_VALUE = "application/json";
-
-    @Value("${TEST_URL:http://localhost:8080}")
-    private String testUrl;
-
-    @BeforeEach
-    public void setUp() {
-        RestAssured.baseURI = testUrl;
-        RestAssured.useRelaxedHTTPSValidation();
-    }
+    private static final String TEST_URL = System.getenv().getOrDefault("TEST_URL", "http://localhost:8080");
 
     @Test
     void functionalTest() {
         Response response = given()
+            .baseUri(TEST_URL)
             .contentType(ContentType.JSON)
             .when()
             .get()

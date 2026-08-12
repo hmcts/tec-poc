@@ -1,9 +1,7 @@
- # renovate: datasource=github-releases depName=microsoft/ApplicationInsights-Java
-ARG APP_INSIGHTS_AGENT_VERSION=3.7.9
-FROM hmctspublic.azurecr.io/base/java:21-distroless
+FROM eclipse-temurin:21-jre-alpine
 
-COPY lib/applicationinsights.json /opt/app/
-COPY build/libs/tec-api-poc.jar /opt/app/
+WORKDIR /opt/app
+COPY build/libs/tec-api-poc.jar ./tec-api-poc.jar
 
 EXPOSE 8080
-CMD [ "tec-api-poc.jar" ]
+CMD ["java", "-jar", "tec-api-poc.jar"]

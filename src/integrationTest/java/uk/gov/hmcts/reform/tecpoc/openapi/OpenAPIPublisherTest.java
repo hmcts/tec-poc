@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import uk.gov.hmcts.reform.tecpoc.support.PostgresIntegrationTest;
 
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -17,13 +18,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Built-in feature which saves service's swagger specs in temporary directory.
- * Each CI run on master should automatically save and upload (if updated) documentation.
+ * Saves the service's OpenAPI specification in a temporary directory for local inspection.
  */
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-class OpenAPIPublisherTest {
+class OpenAPIPublisherTest extends PostgresIntegrationTest {
 
     @Autowired
     private MockMvc mvc;
