@@ -1,72 +1,110 @@
 # TEC API POC
 
-This is a local-only proof of concept. It is not deployed or published to any environment. Docker Compose is the only
-supported runtime and supplies the API and its PostgreSQL database.
+This codebase is a local sandbox for experimentation around CCD config and its effect upon Manage Cases.
+
+Functionality is underpinned by runtime supplied by [rse-cft-lib](https://github.com/hmcts/rse-cft-lib). See
+(AI-generated) doc
+[TEC decentralised CCD architecture](docs/ccd-architecture.md) for the build-time and local runtime architecture, and
+[CFTLib Shared Database](docs/cftlib-shared-database.md) for a description of the decentralised CCD datamodel.
+
+All CCD config including states, events, roles and case types are for illustration only.
 
 ## Prerequisites
 
 - Java 21
-- Docker with Docker Compose V2
+- Docker
+- An authenticated HMCTS Azure Container Registry session (`az acr login --name hmctsprod`)
+- `jq` for the command-line example below
 
 Gradle is provided by the checked-in `./gradlew` wrapper.
 
-## Run the local stack
+## Run TEC with a local CCD stack
 
-Build the application and start PostgreSQL and the API:
+Start the application together with CCD Data Store, Definition Store, User Profile, local IDAM/S2S simulators, and
+their supporting infrastructure:
 
 ```bash
-./bin/run-in-docker.sh
+./gradlew bootWithCCD
 ```
+
+CFTLib runs the Java services in isolated classloaders in one JVM and uses Docker for
+supporting infrastructure. It is therefore a clear stand-in for the CFT platform, but avoids the cost of
+running every CCD Java service as a separate container.
 
 The local services are:
 
-- API: http://localhost:8080
-- Health: http://localhost:8080/health
-- PostgreSQL: `localhost:5432`, database/user/password `tec`
+- TEC API and decentralised callback runtime: http://localhost:4013
+- Manage Case (XUI): http://localhost:3000
+- CCD Data Store: http://localhost:4452
+- IDAM simulator: http://localhost:5062
+- S2S simulator: http://localhost:8489
+- Shared PostgreSQL: `localhost:6432` (the TEC database is `tec`)
 
-Stop the stack while retaining database data (use `docker-compose` instead if Compose is installed as a standalone
-command):
+Stop the Java stack with `Ctrl-C`. The docker containers will continue to run, so they must be stopped separately if
+desired.
 
-```bash
-docker compose down
+### Use Manage Case
+
+CFTLib starts the Manage Case web application in Docker.
+Open http://localhost:3000 and sign in with the configured local clerk account:
+
+```text
+Username: tec-demo@test.com
+Password: password
 ```
 
-Delete the containers and all local database data:
+## Create a PCN case
+
+With `bootWithCCD` running, create a valid TEC case using the local system user:
 
 ```bash
-docker compose down -v
+./bin/create-tec-case.sh
 ```
 
-## CCD Config Generator
+The script generates unique valid identifiers and submits an amount of `12345` pence. Set `AMOUNT_DUE`,
+`FILE_IDENTIFIER`, `BATCH_IDENTIFIER`, or `PENALTY_CHARGE_NUMBER` to override those defaults.
 
-The project uses `hmcts.ccd.sdk` 6.32.0 with its decentralised PostgreSQL runtime. Elasticsearch runtime indexing is
-disabled. Start PostgreSQL before generating CCD configuration:
+To make the request manually, obtain a token for the local TEC system user (password `password`):
 
 ```bash
-docker compose up -d postgres
-./gradlew generateCCDConfig
+TOKEN=$(curl --silent --request POST http://localhost:5062/o/token \
+  --header 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode 'grant_type=password' \
+  --data-urlencode 'client_id=tec' \
+  --data-urlencode 'client_secret=123456' \
+  --data-urlencode 'username=tec-system@test.com' \
+  --data-urlencode 'password=password' \
+  --data-urlencode 'scope=openid profile roles' | jq --raw-output '.access_token')
 ```
 
-Output is written to `build/ccd-definition`. No case-type files are currently produced because this integration slice
-does not define a TEC `CCDConfig`, case model, events, states, or roles.
-
-## Tests
-
-Run unit and integration checks (integration tests use a temporary PostgreSQL Testcontainer):
+Then call the small TEC-facing API:
 
 ```bash
-./gradlew clean check
+curl --request POST http://localhost:4013/pcn-cases \
+  --header "Authorization: Bearer ${TOKEN}" \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "fileIdentifier": "RTE12345",
+    "batchIdentifier": "RTE123456",
+    "penaltyChargeNumber": "TE1234567A8",
+    "respondentDetails1": "ALEX EXAMPLE",
+    "respondentDetails2": "1 EXAMPLE STREET",
+    "respondentDetails3": "LONDON",
+    "respondentDetails4": "SW1A 1AA",
+    "vehicleRegistrationNumber": "AB12CDE",
+    "natureOfOffence": "01",
+    "dateChargeCertificateServed": "260824",
+    "amountDue": 12345
+  }'
 ```
 
-With the Compose stack running, exercise the tests that call the live local API:
+`amountDue` is expressed in pence; for example, `12345` represents £123.45.
 
-```bash
-./gradlew functional smoke
+The response contains the CCD-generated reference and initial state:
+
+```json
+{
+  "caseReference": 1755000000000000,
+  "state": "PENDING_CASE_ISSUED"
+}
 ```
-
-IDAM is represented by a placeholder local URL and is not called during startup. No Helm chart, Terraform,
-Elasticsearch, cloud secrets, image publication, or deployment environment is supported by this repository.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details

@@ -1,4 +1,4 @@
-package uk.gov.hmcts.reform.tecpoc.controllers;
+package uk.gov.hmcts.reform.tecpoc.http;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

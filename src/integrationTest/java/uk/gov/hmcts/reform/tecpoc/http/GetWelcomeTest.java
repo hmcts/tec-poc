@@ -1,4 +1,4 @@
-package uk.gov.hmcts.reform.tecpoc.controllers;
+package uk.gov.hmcts.reform.tecpoc.http;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
