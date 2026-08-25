@@ -16,6 +16,7 @@ import java.io.File;
 public class TecCftLibConfiguration implements CFTLibConfigurer {
 
     private static final String CASEWORKER_GENERIC_ROLE = "caseworker";
+    private static final String ORGANISATION_MANAGER_ROLE = "pui-organisation-manager";
 
     private static final String SYSTEM_USER = "tec-system@test.com";
     private static final String DEMO_USER = "tec-demo@test.com";
@@ -36,13 +37,12 @@ public class TecCftLibConfiguration implements CFTLibConfigurer {
 
         lib.createIdamUser(
             SYSTEM_USER,
-            CASEWORKER_GENERIC_ROLE,
-            UserRole.CLERK.getRole(),
             UserRole.SYSTEM.getRole()
         );
         lib.createIdamUser(
             DEMO_USER,
             CASEWORKER_GENERIC_ROLE,
+            ORGANISATION_MANAGER_ROLE,
             UserRole.CLERK.getRole()
         );
 

@@ -16,11 +16,14 @@ case_seed=$(($(date +%s) ^ $$ ^ RANDOM))
 file_number="$(printf '%05d' "$((case_seed % 100000))")"
 batch_number="$(printf '%06d' "$(((case_seed * 37) % 1000000))")"
 pcn_number="$(printf '%07d' "$(((case_seed * 101) % 10000000))")"
-pcn_check_digit="$((case_seed % 10))"
+authority_code="AB"
+pcn_check_character="A"
+pcn_registration_suffix="0"
+default_penalty_charge_number="${authority_code}${pcn_number}${pcn_check_character}${pcn_registration_suffix}"
 
-file_identifier="${FILE_IDENTIFIER:-RTE${file_number}}"
-batch_identifier="${BATCH_IDENTIFIER:-RTE${batch_number}}"
-penalty_charge_number="${PENALTY_CHARGE_NUMBER:-TE${pcn_number}A${pcn_check_digit}}"
+file_identifier="${FILE_IDENTIFIER:-R${authority_code}${file_number}}"
+batch_identifier="${BATCH_IDENTIFIER:-R${authority_code}${batch_number}}"
+penalty_charge_number="${PENALTY_CHARGE_NUMBER:-${default_penalty_charge_number}}"
 amount_due="${AMOUNT_DUE:-12345}"
 
 case_data="$(jq --null-input --compact-output \
