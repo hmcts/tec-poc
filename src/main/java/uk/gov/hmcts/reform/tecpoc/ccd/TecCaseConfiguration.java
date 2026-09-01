@@ -69,7 +69,8 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getPaymentReference)
             .field(TecCase::getClosureReason)
             .field(TecCase::getRegistrationDocument)
-            .field(TecCase::getRegistrationDate);
+            .field(TecCase::getRegistrationDate)
+            .field(TecCase::getFormValidationResult);
 
         builder.tab("caseFileView", "Case File View")
             .field(TecCase::getCaseFileView, null, "#ARGUMENT(CaseFileView)");
@@ -140,6 +141,13 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .grant(Permission.CRUD, UserRole.SYSTEM)
             .fields()
             .mandatory(TecCase::getRegistrationDocument);
+
+        builder.decentralisedEvent("verifyFormValidation", this::verifyFormValidation)
+            .forStates(CaseState.PENDING_CASE_ISSUED, CaseState.CASE_ISSUED)
+            .name("Verify form validation")
+            .grant(Permission.CRU, UserRole.CLERK)
+            .fields()
+            .mandatory(TecCase::getFormValidationResult);
     }
 
     private SubmitResponse<CaseState> createTecCase(EventPayload<TecCase, CaseState> event) {
@@ -159,6 +167,14 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             LocalDate.now()
         );
         return response(CaseState.AWAITING_RESPONDENT_RESPONSE);
+    }
+
+    private SubmitResponse<CaseState> verifyFormValidation(EventPayload<TecCase, CaseState> event) {
+        repository.recordFormValidation(
+            event.caseReference(),
+            event.caseData().getFormValidationResult()
+        );
+        return SubmitResponse.defaultResponse();
     }
 
     private SubmitResponse<CaseState> response(CaseState state) {

@@ -39,7 +39,8 @@ public class TecCaseRepository {
                    respondent_details_4, respondent_details_5, respondent_details_6,
                    vehicle_registration_number, nature_of_offence,
                    date_charge_certificate_served, amount_due, payment_status,
-                   payment_reference, closure_reason, registration_document, registration_date
+                   payment_reference, closure_reason, registration_document, registration_date,
+                   form_validation_result
               from tec_case
              where case_reference = :caseReference
             """, Map.of("caseReference", caseReference), (resultSet, rowNumber) -> {
@@ -64,6 +65,10 @@ public class TecCaseRepository {
                 Date registrationDate = resultSet.getDate("registration_date");
                 if (registrationDate != null) {
                     result.setRegistrationDate(registrationDate.toLocalDate());
+                }
+                String formValidationResult = resultSet.getString("form_validation_result");
+                if (formValidationResult != null) {
+                    result.setFormValidationResult(FormValidationResult.valueOf(formValidationResult));
                 }
                 return result;
             });
@@ -93,6 +98,16 @@ public class TecCaseRepository {
             .addValue("caseReference", caseReference)
             .addValue("document", document)
             .addValue("registrationDate", registrationDate));
+    }
+
+    public void recordFormValidation(long caseReference, FormValidationResult result) {
+        database.update("""
+            update tec_case
+               set form_validation_result = :result
+             where case_reference = :caseReference
+            """, new MapSqlParameterSource()
+            .addValue("caseReference", caseReference)
+            .addValue("result", result.name()));
     }
 
     private MapSqlParameterSource parameters(long caseReference, TecCase tecCase) {

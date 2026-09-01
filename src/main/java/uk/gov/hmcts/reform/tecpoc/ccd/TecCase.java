@@ -70,6 +70,13 @@ public class TecCase {
     @CCD(label = "Registration date")
     private LocalDate registrationDate;
 
+    @CCD(
+        label = "Form validation result",
+        typeOverride = FieldType.FixedRadioList,
+        typeParameterOverride = "FormValidationResult"
+    )
+    private FormValidationResult formValidationResult;
+
     @CCD(label = "Case file view")
     private ComponentLauncher caseFileView;
 }
