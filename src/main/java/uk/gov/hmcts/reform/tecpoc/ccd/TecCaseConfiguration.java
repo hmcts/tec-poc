@@ -24,6 +24,8 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
     public void configureDecentralised(DecentralisedConfigBuilder<TecCase, CaseState, UserRole> builder) {
         builder.caseType(CASE_TYPE, "TEC case", "A TEC PCN case");
         builder.jurisdiction("TEC", "Traffic Enforcement Centre", "Traffic Enforcement Centre");
+        builder.hmctsServiceId("TEC1");
+        builder.setCallbackHost(System.getenv().getOrDefault("API_URL", "http://localhost:4013"));
 
         configureAccessProfiles(builder);
         configureStateAccess(builder);
@@ -69,6 +71,8 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getRegistrationDocument)
             .field(TecCase::getRegistrationDate);
 
+        builder.tab("caseFileView", "Case File View")
+            .field(TecCase::getCaseFileView, null, "#ARGUMENT(CaseFileView)");
 
         builder.searchInputFields()
             .field(TecCase::getPenaltyChargeNumber, "Penalty charge number");

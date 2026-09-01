@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
 import uk.gov.hmcts.ccd.sdk.api.CCD;
+import uk.gov.hmcts.ccd.sdk.type.ComponentLauncher;
 import uk.gov.hmcts.ccd.sdk.type.FieldType;
 
 @Getter
@@ -68,4 +69,7 @@ public class TecCase {
 
     @CCD(label = "Registration date")
     private LocalDate registrationDate;
+
+    @CCD(label = "Case file view")
+    private ComponentLauncher caseFileView;
 }
