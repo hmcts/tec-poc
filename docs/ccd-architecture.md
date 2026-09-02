@@ -33,6 +33,7 @@ The relevant application classes are:
 - `TecCaseConfiguration`: the case type, access, tabs, Case File View categories, search/work-basket
   fields, events and Java event handlers.
 - `CaseFileCategory`: document folders shown in the Case File View.
+- `TecCaseDocument`: persisted Case File View document metadata.
 - `TecCaseRepository`: persistence of TEC-owned business data in `public.tec_case`.
 - `TecCaseView`: reconstruction of a CCD-facing `TecCase` from the business table.
 - `TecCaseController` and `TecCaseCreationService`: the caller-facing create API and its CCD Data Store client.
@@ -78,6 +79,15 @@ The event handlers update TEC-owned data as follows:
 | `createTecCase` | Registration-request fields; respondent lines 4–6 are optional | Inserts `public.tec_case`; `payment_status` defaults to `PENDING` | `PENDING_CASE_ISSUED` |
 | `registrationPaymentSucceeded` | `paymentReference` | Sets payment status to `SUCCEEDED` and stores the reference | `CASE_ISSUED` |
 | `registrationAuthorised` | `registrationDocument` | Stores the document value and the application server's current date | `AWAITING_RESPONDENT_RESPONSE` |
+| `attachCaseFileDocument` | `caseFileDocument` (CCD Document with `category_id`) | Inserts `public.tec_case_document` | unchanged |
+
+`attachCaseFileDocument` is system-only and hidden from ExUI (`NEVER_SHOW`). Local uploads use
+`bin/attach-case-file-document.sh`, which posts the file to Case Document AM (`:4455`) then submits
+this event. `TecCaseView` rebuilds `allDocuments` from `tec_case_document` so ExUI Case File View can
+group files by category.
+
+Local CDAM expects dm-store on `:4506`. Start `./bin/start-local-dm-store.sh` before attaching files;
+CFTLib does not start dm-store under `AuthMode.Local`.
 
 ### Case presentation and search
 
@@ -89,7 +99,8 @@ The event handlers update TEC-owned data as follows:
 - **Case File View**: document viewer component. Folders are defined as CCD categories in
   `CaseFileCategory` (Hearing documents, Orders and notices of hearings, Applications,
   Correspondence, Uncategorised) and registered via `builder.categories(...)` in
-  `TecCaseConfiguration`.
+  `TecCaseConfiguration`. Documents appear when `TecCaseView` exposes `allDocuments` from
+  `tec_case_document` with matching `category_id` values.
 - **Tasks**: prototype task list for local UX exploration.
 
 Penalty charge number is the only configured search and work-basket input. Results include the case reference,
@@ -242,6 +253,7 @@ CFTLib itself is not deployed.
 | Case type, fields, states, events, tabs, categories and permissions | `TecCaseConfiguration`, `CaseState`, `UserRole`, `CaseFileCategory` and `TecCase` |
 | Definition used by the local CCD stack | Generated `build/ccd-definition/TEC` imported by `TecCftLibConfiguration` |
 | PCN business data | `tec.public.tec_case` |
+| Case File View documents | `tec.public.tec_case_document` |
 | Decentralised lifecycle metadata and event history | SDK-managed `tec.ccd` schema |
 | Current CCD-facing field values | `TecCaseView` projection |
 | Local users, roles and CCD profile | `TecCftLibConfiguration` |

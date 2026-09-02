@@ -11,6 +11,7 @@ readonly CFTLIB_PORTS=(
   4452   # CCD Data Store
   4453   # CCD Definition Store / User Profile
   4455   # CCD Case Document AM API
+  4506   # Local dm-store stub (bin/start-local-dm-store.sh)
   5062   # IDAM simulator
   6432   # Shared PostgreSQL
   8087   # WA Task Management API
@@ -96,34 +97,54 @@ stop_boot_with_ccd_processes() {
   processes="$(list_matching_processes)"
   if [[ -z "${processes}" ]]; then
     echo "No bootWithCCD / CFTLib Java processes found."
+  else
+    echo "Stopping bootWithCCD / CFTLib Java processes:"
+    echo "${processes}"
+    stop_matching_processes TERM
+
+    echo "Waiting for processes to exit..."
+    for _ in {1..10}; do
+      if [[ -z "$(list_matching_processes)" ]]; then
+        echo "bootWithCCD / CFTLib Java processes stopped."
+        break
+      fi
+      sleep 1
+    done
+
+    if [[ -n "$(list_matching_processes)" ]]; then
+      echo "Some processes did not stop gracefully; sending SIGKILL..."
+      stop_matching_processes KILL
+      sleep 1
+    fi
+
+    processes="$(list_matching_processes)"
+    if [[ -n "${processes}" ]]; then
+      echo "Unable to stop the following processes:" >&2
+      echo "${processes}" >&2
+      exit 1
+    fi
+
+    echo "bootWithCCD / CFTLib Java processes stopped."
+  fi
+
+  stop_local_dm_store_stub
+}
+
+stop_local_dm_store_stub() {
+  local pid_file
+  local pid
+
+  pid_file="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/.local-dm-store-stub.pid"
+  if [[ ! -f "${pid_file}" ]]; then
     return 0
   fi
 
-  echo "Stopping bootWithCCD / CFTLib Java processes:"
-  echo "${processes}"
-  stop_matching_processes TERM
-
-  echo "Waiting for processes to exit..."
-  for _ in {1..10}; do
-    if [[ -z "$(list_matching_processes)" ]]; then
-      echo "bootWithCCD / CFTLib Java processes stopped."
-      return 0
-    fi
-    sleep 1
-  done
-
-  echo "Some processes did not stop gracefully; sending SIGKILL..."
-  stop_matching_processes KILL
-  sleep 1
-
-  processes="$(list_matching_processes)"
-  if [[ -n "${processes}" ]]; then
-    echo "Unable to stop the following processes:" >&2
-    echo "${processes}" >&2
-    exit 1
+  pid="$(<"${pid_file}")"
+  if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
+    echo "Stopping local dm-store stub (pid ${pid})..."
+    kill "${pid}" 2>/dev/null || true
   fi
-
-  echo "bootWithCCD / CFTLib Java processes stopped."
+  rm -f "${pid_file}"
 }
 
 port_pattern() {

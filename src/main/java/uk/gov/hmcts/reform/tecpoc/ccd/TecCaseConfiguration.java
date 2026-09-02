@@ -7,6 +7,7 @@ import uk.gov.hmcts.ccd.sdk.api.DecentralisedConfigBuilder;
 import uk.gov.hmcts.ccd.sdk.api.EventPayload;
 import uk.gov.hmcts.ccd.sdk.api.Permission;
 import uk.gov.hmcts.ccd.sdk.api.callback.SubmitResponse;
+import uk.gov.hmcts.ccd.sdk.type.Document;
 
 import java.time.LocalDate;
 import java.util.Set;
@@ -86,7 +87,8 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getFormValidationResultDisplay);
 
         builder.tab("caseFileView", "Case File View")
-            .field(TecCase::getCaseFileView, null, "#ARGUMENT(CaseFileView)");
+            .field(TecCase::getCaseFileView, null, "#ARGUMENT(CaseFileView)")
+            .field(TecCase::getAllDocuments, NEVER_SHOW);
 
         builder.searchInputFields()
             .field(TecCase::getPenaltyChargeNumber, "Penalty charge number");
@@ -161,6 +163,14 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .grant(Permission.CRU, UserRole.CLERK)
             .fields()
             .mandatory(TecCase::getFormValidationResult);
+
+        builder.decentralisedEvent("attachCaseFileDocument", this::attachCaseFileDocument)
+            .forStates(CaseState.values())
+            .name("Attach case file document")
+            .showCondition(NEVER_SHOW)
+            .grant(Permission.CRUD, UserRole.SYSTEM)
+            .fields()
+            .mandatory(TecCase::getCaseFileDocument);
     }
 
     private SubmitResponse<CaseState> createTecCase(EventPayload<TecCase, CaseState> event) {
@@ -188,6 +198,34 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             event.caseData().getFormValidationResult()
         );
         return SubmitResponse.defaultResponse();
+    }
+
+    private SubmitResponse<CaseState> attachCaseFileDocument(EventPayload<TecCase, CaseState> event) {
+        Document document = event.caseData().getCaseFileDocument();
+        if (document == null) {
+            throw new IllegalArgumentException("caseFileDocument is required");
+        }
+        if (isBlank(document.getUrl())
+            || isBlank(document.getBinaryUrl())
+            || isBlank(document.getFilename())) {
+            throw new IllegalArgumentException(
+                "caseFileDocument requires document_url, document_binary_url and document_filename"
+            );
+        }
+
+        String categoryId = CaseFileCategory.normalisedCategoryId(document.getCategoryId());
+        repository.insertDocument(
+            event.caseReference(),
+            categoryId,
+            document.getUrl(),
+            document.getBinaryUrl(),
+            document.getFilename()
+        );
+        return SubmitResponse.defaultResponse();
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private SubmitResponse<CaseState> response(CaseState state) {
