@@ -30,7 +30,17 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
         configureAccessProfiles(builder);
         configureStateAccess(builder);
         configureCaseView(builder);
+        configureCaseFileCategories(builder);
         configureEvents(builder);
+    }
+
+    private void configureCaseFileCategories(DecentralisedConfigBuilder<TecCase, CaseState, UserRole> builder) {
+        for (CaseFileCategory category : CaseFileCategory.values()) {
+            builder.categories(UserRole.CLERK)
+                .categoryID(category.getId())
+                .categoryLabel(category.getLabel())
+                .displayOrder(category.getDisplayOrder());
+        }
     }
 
     private void configureAccessProfiles(DecentralisedConfigBuilder<TecCase, CaseState, UserRole> builder) {

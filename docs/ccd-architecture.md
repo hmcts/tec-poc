@@ -30,7 +30,9 @@ The relevant application classes are:
 - `TecCase`: the CCD-facing data model.
 - `CaseState`: the four states generated into the CCD definition.
 - `UserRole`: the system and clerk access profiles.
-- `TecCaseConfiguration`: the case type, access, tabs, search/work-basket fields, events and Java event handlers.
+- `TecCaseConfiguration`: the case type, access, tabs, Case File View categories, search/work-basket
+  fields, events and Java event handlers.
+- `CaseFileCategory`: document folders shown in the Case File View.
 - `TecCaseRepository`: persistence of TEC-owned business data in `public.tec_case`.
 - `TecCaseView`: reconstruction of a CCD-facing `TecCase` from the business table.
 - `TecCaseController` and `TecCaseCreationService`: the caller-facing create API and its CCD Data Store client.
@@ -84,7 +86,10 @@ The event handlers update TEC-owned data as follows:
 - **Case details**: a **Registration** section containing identifiers, respondent lines, vehicle/offence details,
   certificate date, amount, and registration workflow fields (payment status/reference, closure reason, registration
   document and date, form validation result).
-- **Case File View**: document viewer component.
+- **Case File View**: document viewer component. Folders are defined as CCD categories in
+  `CaseFileCategory` (Hearing documents, Orders and notices of hearings, Applications,
+  Correspondence, Uncategorised) and registered via `builder.categories(...)` in
+  `TecCaseConfiguration`.
 - **Tasks**: prototype task list for local UX exploration.
 
 Penalty charge number is the only configured search and work-basket input. Results include the case reference,
@@ -234,7 +239,7 @@ CFTLib itself is not deployed.
 
 | Concern | Source of truth |
 | --- | --- |
-| Case type, fields, states, events, tabs and permissions | `TecCaseConfiguration`, `CaseState`, `UserRole` and `TecCase` |
+| Case type, fields, states, events, tabs, categories and permissions | `TecCaseConfiguration`, `CaseState`, `UserRole`, `CaseFileCategory` and `TecCase` |
 | Definition used by the local CCD stack | Generated `build/ccd-definition/TEC` imported by `TecCftLibConfiguration` |
 | PCN business data | `tec.public.tec_case` |
 | Decentralised lifecycle metadata and event history | SDK-managed `tec.ccd` schema |
