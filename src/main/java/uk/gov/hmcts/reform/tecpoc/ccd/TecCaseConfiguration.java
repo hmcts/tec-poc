@@ -49,6 +49,10 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
     }
 
     private void configureCaseView(DecentralisedConfigBuilder<TecCase, CaseState, UserRole> builder) {
+        builder.tab("tasks", "Tasks")
+            .label("tasksMarkdownLabel", null, "${tasksMarkdown}")
+            .field("tasksMarkdown", NEVER_SHOW);
+
         builder.tab("caseDetails", "Case details")
             .label("registrationSection", null, "## Registration")
             .field(TecCase::getFileIdentifier)
@@ -69,7 +73,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getClosureReason)
             .field(TecCase::getRegistrationDocument)
             .field(TecCase::getRegistrationDate)
-            .field(TecCase::getFormValidationResult);
+            .field(TecCase::getFormValidationResultDisplay);
 
         builder.tab("caseFileView", "Case File View")
             .field(TecCase::getCaseFileView, null, "#ARGUMENT(CaseFileView)");

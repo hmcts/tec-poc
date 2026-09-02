@@ -108,3 +108,17 @@ The response contains the CCD-generated reference and initial state:
   "state": "PENDING_CASE_ISSUED"
 }
 ```
+
+### Prototype Tasks tab (local)
+
+The **Tasks** tab is a CCD collection tab backed by prototype data in `TecCaseView`, not Work Allocation.
+No extra docker services or Azure registry access are required.
+
+Create a case and move it to `CASE_ISSUED` to see sample tasks:
+
+```bash
+./bin/create-tec-case.sh
+./bin/transition-to-case-issued.sh <case-reference-from-output>
+```
+
+Open the case in Manage Case as `tec-demo@test.com` to see the **Tasks** tab.

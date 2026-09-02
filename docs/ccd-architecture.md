@@ -79,12 +79,13 @@ The event handlers update TEC-owned data as follows:
 
 ### Case presentation and search
 
-`TecCaseConfiguration` generates two application tabs in addition to CCD's case-history tab:
+`TecCaseConfiguration` generates three application tabs in addition to CCD's case-history tab:
 
 - **Case details**: a **Registration** section containing identifiers, respondent lines, vehicle/offence details,
   certificate date, amount, and registration workflow fields (payment status/reference, closure reason, registration
   document and date, form validation result).
 - **Case File View**: document viewer component.
+- **Tasks**: prototype task list for local UX exploration.
 
 Penalty charge number is the only configured search and work-basket input. Results include the case reference,
 penalty charge number, respondent lines 1–3 and vehicle registration number.
@@ -92,6 +93,29 @@ penalty charge number, respondent lines 1–3 and vehicle registration number.
 The tab configuration is static CCD metadata. `TecCaseView` supplies the current values at runtime by loading the row
 whose `case_reference` matches the CCD reference. ExUI and API clients call CCD; they do not call `TecCaseView`
 directly.
+
+### Prototype Tasks tab
+
+The **Tasks** tab is declared in `TecCaseConfiguration` and rendered as HTML that approximates ExUI's Work
+Allocation `exui-case-task` cards (priority, due date, assignee, Manage links and Next steps). It is not connected to
+Work Allocation. `TecCaseView` populates `tasksMarkdown` so the tab can be used for prototyping layout without Camunda
+or WA services.
+
+| Piece | Location / behaviour |
+| --- | --- |
+| Tab config | `builder.tab("tasks", "Tasks")` with a label interpolating `${tasksMarkdown}` |
+| Prototype HTML | `TecPrototypeTasks.markdownFor(caseRef, state, tecCase)` |
+| Start-task links | Next steps links to `/cases/case-details/{ref}/trigger/{eventId}` (for example `verifyFormValidation`) |
+
+When a case is in `CASE_ISSUED`, the tab shows a mix of unassigned, assigned-to-you and assigned-to-someone-else cards
+so Manage and Next steps layouts can be compared.
+
+#### Local setup
+
+1. Start the CFTLib stack: `./gradlew bootWithCCD`
+2. Create a case: `./bin/create-tec-case.sh`
+3. Move it to `CASE_ISSUED`: `./bin/transition-to-case-issued.sh <case-reference>`
+4. Sign in to Manage Case as `tec-demo@test.com` / `password` and open the case — the **Tasks** tab should list the tasks
 
 ## Definition generation and runtime
 
@@ -216,6 +240,7 @@ CFTLib itself is not deployed.
 | Decentralised lifecycle metadata and event history | SDK-managed `tec.ccd` schema |
 | Current CCD-facing field values | `TecCaseView` projection |
 | Local users, roles and CCD profile | `TecCftLibConfiguration` |
+| Prototype task list shown on Tasks tab | `TecPrototypeTasks` in `TecCaseView` |
 | Local service URLs and CCD-to-TEC route | `build.gradle` and `application.yaml` |
 
 ## Repository map
@@ -227,3 +252,4 @@ CFTLib itself is not deployed.
 - `src/main/resources/db/migration/V1__create_tec_case.sql`: TEC business schema.
 - `src/cftlib/java/uk/gov/hmcts/reform/tecpoc/cftlib/TecCftLibConfiguration.java`: local setup and definition import.
 - `bin/create-tec-case.sh`: local case-creation example.
+- `bin/transition-to-case-issued.sh`: fires `registrationPaymentSucceeded` to move a case to `CASE_ISSUED`.

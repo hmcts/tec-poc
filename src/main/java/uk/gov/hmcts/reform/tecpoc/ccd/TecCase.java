@@ -77,6 +77,16 @@ public class TecCase {
     )
     private FormValidationResult formValidationResult;
 
+    /**
+     * Case-view display for form validation. Always populated so ExUI shows the row even when
+     * {@link #formValidationResult} is unset ({@code @JsonInclude(NON_NULL)} would otherwise omit it).
+     */
+    @CCD(label = "Form validation result")
+    private String formValidationResultDisplay;
+
     @CCD(label = "Case file view")
     private ComponentLauncher caseFileView;
+
+    @CCD(label = "Tasks", searchable = false)
+    private String tasksMarkdown;
 }

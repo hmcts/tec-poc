@@ -11,8 +11,18 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
 
     private final TecCaseRepository repository;
 
+    private static final String FORM_VALIDATION_NOT_RECORDED = "Not validated";
+
     @Override
     public TecCase getCase(CaseViewRequest<CaseState> request) {
-        return repository.find(request.caseRef());
+        TecCase tecCase = repository.find(request.caseRef());
+        tecCase.setTasksMarkdown(
+            TecPrototypeTasks.markdownFor(request.caseRef(), request.state(), tecCase)
+        );
+        FormValidationResult validationResult = tecCase.getFormValidationResult();
+        tecCase.setFormValidationResultDisplay(
+            validationResult == null ? FORM_VALIDATION_NOT_RECORDED : validationResult.getLabel()
+        );
+        return tecCase;
     }
 }
