@@ -81,8 +81,10 @@ The event handlers update TEC-owned data as follows:
 
 `TecCaseConfiguration` generates two application tabs in addition to CCD's case-history tab:
 
-- **Registration request**: identifiers, respondent lines, vehicle/offence details, certificate date and amount.
-- **Registration workflow**: payment status/reference, closure reason, registration document and registration date.
+- **Case details**: a **Registration** section containing identifiers, respondent lines, vehicle/offence details,
+  certificate date, amount, and registration workflow fields (payment status/reference, closure reason, registration
+  document and date, form validation result).
+- **Case File View**: document viewer component.
 
 Penalty charge number is the only configured search and work-basket input. Results include the case reference,
 penalty charge number, respondent lines 1–3 and vehicle registration number.

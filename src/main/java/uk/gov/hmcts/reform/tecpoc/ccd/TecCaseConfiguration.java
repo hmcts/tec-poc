@@ -49,7 +49,8 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
     }
 
     private void configureCaseView(DecentralisedConfigBuilder<TecCase, CaseState, UserRole> builder) {
-        builder.tab("registrationRequest", "Registration request")
+        builder.tab("caseDetails", "Case details")
+            .label("registrationSection", null, "## Registration")
             .field(TecCase::getFileIdentifier)
             .field(TecCase::getBatchIdentifier)
             .field(TecCase::getPenaltyChargeNumber)
@@ -62,9 +63,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getVehicleRegistrationNumber)
             .field(TecCase::getNatureOfOffence)
             .field(TecCase::getDateChargeCertificateServed)
-            .field(TecCase::getAmountDue);
-
-        builder.tab("registration", "Registration workflow")
+            .field(TecCase::getAmountDue)
             .field(TecCase::getPaymentStatus)
             .field(TecCase::getPaymentReference)
             .field(TecCase::getClosureReason)
