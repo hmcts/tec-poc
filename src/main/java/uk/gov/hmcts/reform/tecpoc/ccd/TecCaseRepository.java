@@ -1,8 +1,11 @@
 package uk.gov.hmcts.reform.tecpoc.ccd;
 
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -39,7 +42,8 @@ public class TecCaseRepository {
                    respondent_details_4, respondent_details_5, respondent_details_6,
                    vehicle_registration_number, nature_of_offence,
                    date_charge_certificate_served, amount_due, payment_status,
-                   payment_reference, closure_reason, registration_document, registration_date
+                   payment_reference, closure_reason, registration_document, registration_date,
+                   form_validation_result
               from tec_case
              where case_reference = :caseReference
             """, Map.of("caseReference", caseReference), (resultSet, rowNumber) -> {
@@ -64,6 +68,10 @@ public class TecCaseRepository {
                 Date registrationDate = resultSet.getDate("registration_date");
                 if (registrationDate != null) {
                     result.setRegistrationDate(registrationDate.toLocalDate());
+                }
+                String formValidationResult = resultSet.getString("form_validation_result");
+                if (formValidationResult != null) {
+                    result.setFormValidationResult(FormValidationResult.valueOf(formValidationResult));
                 }
                 return result;
             });
@@ -93,6 +101,59 @@ public class TecCaseRepository {
             .addValue("caseReference", caseReference)
             .addValue("document", document)
             .addValue("registrationDate", registrationDate));
+    }
+
+    public void recordFormValidation(long caseReference, FormValidationResult result) {
+        database.update("""
+            update tec_case
+               set form_validation_result = :result
+             where case_reference = :caseReference
+            """, new MapSqlParameterSource()
+            .addValue("caseReference", caseReference)
+            .addValue("result", result.name()));
+    }
+
+    public UUID insertDocument(
+        long caseReference,
+        String categoryId,
+        String documentUrl,
+        String documentBinaryUrl,
+        String filename
+    ) {
+        UUID id = UUID.randomUUID();
+        database.update("""
+            insert into tec_case_document (
+                id, case_reference, category_id, document_url, document_binary_url, filename
+            ) values (
+                :id, :caseReference, :categoryId, :documentUrl, :documentBinaryUrl, :filename
+            )
+            """, new MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("caseReference", caseReference)
+            .addValue("categoryId", categoryId)
+            .addValue("documentUrl", documentUrl)
+            .addValue("documentBinaryUrl", documentBinaryUrl)
+            .addValue("filename", filename));
+        return id;
+    }
+
+    public List<TecCaseDocument> findDocuments(long caseReference) {
+        return database.query("""
+            select id, category_id, document_url, document_binary_url, filename, created_at
+              from tec_case_document
+             where case_reference = :caseReference
+             order by created_at asc, id asc
+            """, Map.of("caseReference", caseReference), (resultSet, rowNumber) -> {
+                Timestamp createdAt = resultSet.getTimestamp("created_at");
+                return new TecCaseDocument(
+                    resultSet.getObject("id", UUID.class),
+                    resultSet.getString("category_id"),
+                    resultSet.getString("document_url"),
+                    resultSet.getString("document_binary_url"),
+                    resultSet.getString("filename"),
+                    createdAt == null ? null : createdAt.toInstant()
+                );
+            });
     }
 
     private MapSqlParameterSource parameters(long caseReference, TecCase tecCase) {

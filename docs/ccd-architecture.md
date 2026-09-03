@@ -30,7 +30,10 @@ The relevant application classes are:
 - `TecCase`: the CCD-facing data model.
 - `CaseState`: the four states generated into the CCD definition.
 - `UserRole`: the system and clerk access profiles.
-- `TecCaseConfiguration`: the case type, access, tabs, search/work-basket fields, events and Java event handlers.
+- `TecCaseConfiguration`: the case type, access, tabs, Case File View categories, search/work-basket
+  fields, events and Java event handlers.
+- `CaseFileCategory`: document folders shown in the Case File View.
+- `TecCaseDocument`: persisted Case File View document metadata.
 - `TecCaseRepository`: persistence of TEC-owned business data in `public.tec_case`.
 - `TecCaseView`: reconstruction of a CCD-facing `TecCase` from the business table.
 - `TecCaseController` and `TecCaseCreationService`: the caller-facing create API and its CCD Data Store client.
@@ -76,13 +79,29 @@ The event handlers update TEC-owned data as follows:
 | `createTecCase` | Registration-request fields; respondent lines 4–6 are optional | Inserts `public.tec_case`; `payment_status` defaults to `PENDING` | `PENDING_CASE_ISSUED` |
 | `registrationPaymentSucceeded` | `paymentReference` | Sets payment status to `SUCCEEDED` and stores the reference | `CASE_ISSUED` |
 | `registrationAuthorised` | `registrationDocument` | Stores the document value and the application server's current date | `AWAITING_RESPONDENT_RESPONSE` |
+| `attachCaseFileDocument` | `caseFileDocument` (CCD Document with `category_id`) | Inserts `public.tec_case_document` | unchanged |
+
+`attachCaseFileDocument` is system-only and hidden from ExUI (`NEVER_SHOW`). Local uploads use
+`bin/attach-case-file-document.sh`, which posts the file to Case Document AM (`:4455`) then submits
+this event. `TecCaseView` rebuilds `allDocuments` from `tec_case_document` so ExUI Case File View can
+group files by category.
+
+Local CDAM expects dm-store on `:4506`. Start `./bin/start-local-dm-store.sh` before attaching files;
+CFTLib does not start dm-store under `AuthMode.Local`.
 
 ### Case presentation and search
 
-`TecCaseConfiguration` generates two application tabs in addition to CCD's case-history tab:
+`TecCaseConfiguration` generates three application tabs in addition to CCD's case-history tab:
 
-- **Registration request**: identifiers, respondent lines, vehicle/offence details, certificate date and amount.
-- **Registration workflow**: payment status/reference, closure reason, registration document and registration date.
+- **Case details**: a **Registration** section containing identifiers, respondent lines, vehicle/offence details,
+  certificate date, amount, and registration workflow fields (payment status/reference, closure reason, registration
+  document and date, form validation result).
+- **Case File View**: document viewer component. Folders are defined as CCD categories in
+  `CaseFileCategory` (Hearing documents, Orders and notices of hearings, Applications,
+  Correspondence, Uncategorised) and registered via `builder.categories(...)` in
+  `TecCaseConfiguration`. Documents appear when `TecCaseView` exposes `allDocuments` from
+  `tec_case_document` with matching `category_id` values.
+- **Tasks**: prototype task list for local UX exploration.
 
 Penalty charge number is the only configured search and work-basket input. Results include the case reference,
 penalty charge number, respondent lines 1–3 and vehicle registration number.
@@ -90,6 +109,29 @@ penalty charge number, respondent lines 1–3 and vehicle registration number.
 The tab configuration is static CCD metadata. `TecCaseView` supplies the current values at runtime by loading the row
 whose `case_reference` matches the CCD reference. ExUI and API clients call CCD; they do not call `TecCaseView`
 directly.
+
+### Prototype Tasks tab
+
+The **Tasks** tab is declared in `TecCaseConfiguration` and rendered as HTML that approximates ExUI's Work
+Allocation `exui-case-task` cards (priority, due date, assignee, Manage links and Next steps). It is not connected to
+Work Allocation. `TecCaseView` populates `tasksMarkdown` so the tab can be used for prototyping layout without Camunda
+or WA services.
+
+| Piece | Location / behaviour |
+| --- | --- |
+| Tab config | `builder.tab("tasks", "Tasks")` with a label interpolating `${tasksMarkdown}` |
+| Prototype HTML | `TecPrototypeTasks.markdownFor(caseRef, state, tecCase)` |
+| Start-task links | Next steps links to `/cases/case-details/{ref}/trigger/{eventId}` (for example `verifyFormValidation`) |
+
+When a case is in `CASE_ISSUED`, the tab shows a mix of unassigned, assigned-to-you and assigned-to-someone-else cards
+so Manage and Next steps layouts can be compared.
+
+#### Local setup
+
+1. Start the CFTLib stack: `./gradlew bootWithCCD`
+2. Create a case: `./bin/create-tec-case.sh`
+3. Move it to `CASE_ISSUED`: `./bin/transition-to-case-issued.sh <case-reference>`
+4. Sign in to Manage Case as `tec-demo@test.com` / `password` and open the case — the **Tasks** tab should list the tasks
 
 ## Definition generation and runtime
 
@@ -208,12 +250,14 @@ CFTLib itself is not deployed.
 
 | Concern | Source of truth |
 | --- | --- |
-| Case type, fields, states, events, tabs and permissions | `TecCaseConfiguration`, `CaseState`, `UserRole` and `TecCase` |
+| Case type, fields, states, events, tabs, categories and permissions | `TecCaseConfiguration`, `CaseState`, `UserRole`, `CaseFileCategory` and `TecCase` |
 | Definition used by the local CCD stack | Generated `build/ccd-definition/TEC` imported by `TecCftLibConfiguration` |
 | PCN business data | `tec.public.tec_case` |
+| Case File View documents | `tec.public.tec_case_document` |
 | Decentralised lifecycle metadata and event history | SDK-managed `tec.ccd` schema |
 | Current CCD-facing field values | `TecCaseView` projection |
 | Local users, roles and CCD profile | `TecCftLibConfiguration` |
+| Prototype task list shown on Tasks tab | `TecPrototypeTasks` in `TecCaseView` |
 | Local service URLs and CCD-to-TEC route | `build.gradle` and `application.yaml` |
 
 ## Repository map
@@ -225,3 +269,4 @@ CFTLib itself is not deployed.
 - `src/main/resources/db/migration/V1__create_tec_case.sql`: TEC business schema.
 - `src/cftlib/java/uk/gov/hmcts/reform/tecpoc/cftlib/TecCftLibConfiguration.java`: local setup and definition import.
 - `bin/create-tec-case.sh`: local case-creation example.
+- `bin/transition-to-case-issued.sh`: fires `registrationPaymentSucceeded` to move a case to `CASE_ISSUED`.

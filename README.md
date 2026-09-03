@@ -108,3 +108,56 @@ The response contains the CCD-generated reference and initial state:
   "state": "PENDING_CASE_ISSUED"
 }
 ```
+
+### Prototype Tasks tab (local)
+
+The **Tasks** tab is a CCD collection tab backed by prototype data in `TecCaseView`, not Work Allocation.
+No extra docker services or Azure registry access are required.
+
+Create a case and move it to `CASE_ISSUED` to see sample tasks:
+
+```bash
+./bin/create-tec-case.sh
+./bin/transition-to-case-issued.sh <case-reference-from-output>
+```
+
+Open the case in Manage Case as `tec-demo@test.com` to see the **Tasks** tab.
+
+### Attach a document to Case File View (local)
+
+Case File View folders are empty until documents are attached. CFTLib's Case Document AM API
+proxies uploads to dm-store on port `4506`, which is not started by `bootWithCCD`. Start the local
+stub first and **keep it running** while attaching *and* while opening documents in Manage Case
+(the document viewer loads binaries through CDAM → dm-store):
+
+```bash
+./bin/start-local-dm-store.sh
+```
+
+With `bootWithCCD` running (restart it after pulling these changes so the attach event, migration and
+document URL pattern are loaded), create a case and attach a file:
+
+```bash
+./bin/create-tec-case.sh
+./bin/attach-case-file-document.sh <case-reference> "Hearing documents" ./path/to/file.pdf
+```
+
+If the filename has spaces, quote it:
+
+```bash
+./bin/attach-case-file-document.sh <case-reference> "Applications" "Out-of-time TE9 - Claimant 1.pdf"
+```
+
+`<folder>` may be a category id or label: `hearingDocuments`, `ordersAndNoticesOfHearings`,
+`applications`, `correspondence`, `uncategorisedDocuments` (or the matching display labels).
+
+Refresh the case in Manage Case to see the file under the chosen Case File View folder.
+
+Documents are stored by the local dm-store stub under `bin/.local-dm-store-data/`. If that stub
+was restarted before persistence was added, older folder entries can still appear while the viewer
+stays blank — re-attach the file once so the binary is available again.
+
+Manage Case loads the viewer via its `/documentsv2` proxy to Case Document AM (`:4455`).
+`bootWithCCD` sets that through `RSE_LIB_XUI_ENV_SERVICES_DOCUMENTS_API(_V2)` in `build.gradle`.
+If the viewer is empty and XUI logs show proxying to `:5062` instead of `:4455`, restart
+`bootWithCCD` so Manage Case picks up those URLs.

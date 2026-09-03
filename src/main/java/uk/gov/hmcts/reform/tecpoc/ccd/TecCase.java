@@ -4,10 +4,14 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import uk.gov.hmcts.ccd.sdk.api.CCD;
+import uk.gov.hmcts.ccd.sdk.type.ComponentLauncher;
+import uk.gov.hmcts.ccd.sdk.type.Document;
 import uk.gov.hmcts.ccd.sdk.type.FieldType;
+import uk.gov.hmcts.ccd.sdk.type.ListValue;
 
 @Getter
 @Setter
@@ -68,4 +72,36 @@ public class TecCase {
 
     @CCD(label = "Registration date")
     private LocalDate registrationDate;
+
+    @CCD(
+        label = "Form validation result",
+        typeOverride = FieldType.FixedRadioList,
+        typeParameterOverride = "FormValidationResult"
+    )
+    private FormValidationResult formValidationResult;
+
+    /**
+     * Case-view display for form validation. Always populated so ExUI shows the row even when
+     * {@link #formValidationResult} is unset ({@code @JsonInclude(NON_NULL)} would otherwise omit it).
+     */
+    @CCD(label = "Form validation result")
+    private String formValidationResultDisplay;
+
+    /**
+     * Case File View source documents. Populated by {@link TecCaseView}; not shown on Case details.
+     */
+    @CCD(label = "All documents", searchable = false)
+    private List<ListValue<Document>> allDocuments;
+
+    /**
+     * Event-only field used by {@code attachCaseFileDocument}.
+     */
+    @CCD(label = "Case file document", searchable = false)
+    private Document caseFileDocument;
+
+    @CCD(label = "Case file view")
+    private ComponentLauncher caseFileView;
+
+    @CCD(label = "Tasks", searchable = false)
+    private String tasksMarkdown;
 }
