@@ -57,11 +57,11 @@ Use event ids from the catalogue. For form edits that should stay data-gated, wr
 | --- | --- | --- | --- | --- |
 | `PENDING_CASE_ISSUED` | `verifyFormValidation`; form edits if matching form | | — | |
 | `CASE_ISSUED` | `verifyFormValidation`; form edits if matching form | | — | |
-| `AWAITING_RESPONDENT_RESPONSE` | form edits if matching form | | — | |
-| `AWAITING_LA_OOT_RESPONSE` | form edits if matching form | | — | |
-| `CASE_REVOKED_IN_TIME` | form edits if matching form | | — | |
-| `CASE_REVOKED_OOT_ACCEPTED` | form edits if matching form | | — | |
-| `CASE_REVOKED_LA_NO_RESPONSE` | form edits if matching form | | — | |
+| `AWAITING_RESPONDENT_RESPONSE` | form edits if matching form | | — | Close case (in all states) |
+| `AWAITING_LA_OOT_RESPONSE` | form edits if matching form | | — | Acccept out of time or refuse out of time |
+| `CASE_REVOKED_IN_TIME` | form edits if matching form | - | — | - |
+| `CASE_REVOKED_OOT_ACCEPTED` | form edits if matching form | - | — | - |
+| `CASE_REVOKED_LA_NO_RESPONSE` | form edits if matching form | - | — | - |
 | `PENDING_REFUSAL_DECISION` | form edits if matching form | | — | |
 | `REFUSAL_ORDER` | form edits if matching form | | — | |
 | `CASE_REVOKED_LA_REFUSAL_OVERTURNED` | form edits if matching form | | — | |
