@@ -23,16 +23,34 @@ Edit the Mermaid in this file (`tech_docs/source/state-event-model.html.md.erb`)
 
 ```mermaid
 stateDiagram-v2
-    state TEC {
+
         [*] --> PENDING_CASE_ISSUED: createTecCase
         PENDING_CASE_ISSUED --> CASE_ISSUED: registrationPaymentSucceeded
         CASE_ISSUED --> AWAITING_RESPONDENT_RESPONSE: registrationAuthorised
-    }
-
-    TEC --> WARRANT_AUTHORISATION_ISSUED: applyWarrantAuthorisation [active]
-    TEC --> WARRANT_AUTHORISATION_EXPIRED: applyWarrantAuthorisation [expired]
-    TEC --> REFER_FOR_ENFORCEMENT: linkBatchCase [TRANSFER_REQUEST]
-    TEC --> CLOSED: linkBatchCase [CASE_CLOSURE_REQUESTS]
+        AWAITING_RESPONDENT_RESPONSE --> ELIGIBLE_FOR_WARRANT: when(>36 days since registration)
+        AWAITING_RESPONDENT_RESPONSE --> CASE_REVOKED_IN_TIME: InTimeApplicationReceivedValid
+        AWAITING_RESPONDENT_RESPONSE --> AWAITING_INTIME_VALIDATION: InTimeApplicationReceivedInvalid
+        AWAITING_RESPONDENT_RESPONSE --> AWAITING_LA_OOT_RESPONSE: OutOfTimeApplicationReceivedValid
+        AWAITING_RESPONDENT_RESPONSE --> AWAITING_OOT_VALIDATION: OutOfTimeApplicationReceivedInvalid
+        WARRANT_AUTHORISATION_ISSUED --> AWAITING_LA_OOT_RESPONSE: OutOfTimeApplicationReceivedValid
+        WARRANT_AUTHORISATION_ISSUED --> AWAITING_OOT_VALIDATION: OutOfTimeApplicationReceivedInvalid
+        AWAITING_INTIME_VALIDATION --> CASE_REVOKED_IN_TIME: InTimeApplicationValidated
+        AWAITING_INTIME_VALIDATION --> AWAITING_RESPONDENT_RESPONSE: InTimeApplicationRejected
+        AWAITING_OOT_VALIDATION --> AWAITING_LA_OOT_RESPONSE: OutOfTimeApplicationValidated
+        state return_after_OOT_rejection <<choice>>
+        AWAITING_OOT_VALIDATION --> return_after_OOT_rejection: OutOfTimeApplicationRejected
+        return_after_OOT_rejection --> WARRANT_AUTHORISATION_ISSUED: case has warrant auth
+        return_after_OOT_rejection --> ELIGIBLE_FOR_WARRANT: no warrant auth
+        ELIGIBLE_FOR_WARRANT --> WARRANT_AUTHORISATION_ISSUED: warrantAuthorisationRequested
+        AWAITING_LA_OOT_RESPONSE --> CASE_REVOKED_OOT_ACCEPTED: OOTAccepted
+        AWAITING_LA_OOT_RESPONSE --> PENDING_REFUSAL_DECISION: OOTRefused
+        PENDING_REFUSAL_DECISION --> REFUSAL_ORDER: OOTRefusalUpheld
+        PENDING_REFUSAL_DECISION --> CASE_REVOKED_LA_REFUSAL_OVERTURNED: OOTRefusalOverturned
+        WARRANT_AUTHORISATION_ISSUED --> WARRANT_AUTHORISATION_EXPIRED: when(expiry_date)
+        WARRANT_AUTHORISATION_EXPIRED --> WARRANT_AUTHORISATION_ISSUED: warrantReissueRequested
+        WARRANT_AUTHORISATION_ISSUED --> REFER_FOR_ENFORCEMENT: TE10received
+        CLOSED: linkBatchCase [CASE_CLOSURE_REQUESTS]
+        CLOSED: closeCase [*]
 ```
 
 The four arrows that leave the box are implemented for every `CaseState`, including the four states drawn outside the box. `applyWarrantAuthorisation` with status `cancelled` leaves the state unchanged. `linkBatchCase` for any other `BatchOperation` (`REGISTRATION`, `WARRANT_AUTH_REQUESTS`, `WARRANT_REISSUE_REQUESTS`, `OUT_OF_TIME_DECISIONS`, `CHANGE_OF_ADDRESS`) leaves the state unchanged. Transfer to enforcement is a `TEC_BATCH` of type `TRANSFER_REQUEST`, not a separate case type. Closure is the `CASE_CLOSURE_REQUESTS` link. There is no separate close event, and no payment-failure event.
