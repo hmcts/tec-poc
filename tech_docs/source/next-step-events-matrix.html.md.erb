@@ -62,18 +62,18 @@ Use event ids from the catalogue. For form edits that should stay data-gated, wr
 | `CASE_REVOKED_IN_TIME` | form edits if matching form | - | — | - |
 | `CASE_REVOKED_OOT_ACCEPTED` | form edits if matching form | - | — | - |
 | `CASE_REVOKED_LA_NO_RESPONSE` | form edits if matching form | - | — | - |
-| `PENDING_REFUSAL_DECISION` | form edits if matching form | | — | |
+| `PENDING_REFUSAL_DECISION` | form edits if matching form | CO can agree with OOT refusal or overturn it | — |  |
 | `REFUSAL_ORDER` | form edits if matching form | | — | |
-| `CASE_REVOKED_LA_REFUSAL_OVERTURNED` | form edits if matching form | | — | |
+| `CASE_REVOKED_LA_REFUSAL_OVERTURNED` | form edits if matching form | | — | Make N244 application (same as housing possessions)  |
 | `PENDING_OOT_APPEAL_PAYMENT` | form edits if matching form | | — | |
-| `OOT_APPEAL_PAYMENT_CONFIRMED` | form edits if matching form | | — | |
-| `PENDING_OOT_APPEAL_DECISION` | form edits if matching form | | — | |
+| `OOT_APPEAL_PAYMENT_CONFIRMED` | form edits if matching form | If n244 is from the respondent we'll need an event: create OOT appeal record | — | |
+| `PENDING_OOT_APPEAL_DECISION` | form edits if matching form | unsure who has events, service to decide | — | |
 | `OOT_APPEAL_REFUSED` | form edits if matching form | | — | |
 | `CASE_REVOKED_OOT_APPEAL_ACCEPTED` | form edits if matching form | | — | |
-| `WARRANT_AUTHORISATION_ISSUED` | form edits if matching form | | — | |
-| `WARRANT_AUTHORISATION_EXPIRED` | form edits if matching form | | — | |
+| `WARRANT_AUTHORISATION_ISSUED` | form edits if matching form | - | — | - |
+| `WARRANT_AUTHORISATION_EXPIRED` | form edits if matching form | - | — | make warrant reissue request? check with business |
 | `REFER_FOR_ENFORCEMENT` | form edits if matching form | | — | |
-| `CLOSED` | form edits if matching form | | — | |
+| `CLOSED` | form edits if matching form | - | — | - |
 
 “Form edits if matching form” = `editTe9Application` / `editPe3Application` / `editTe7Application` / `editPe2Application`
 when the corresponding case-data field is set (today: allowed in **all** states for clerk).
