@@ -36,7 +36,7 @@ Legend for **Current** columns: what the POC grants today for Next-step visibili
 | `createTecCase` | PCN case created from datafile | *(create)* | `PENDING_CASE_ISSUED` | SYSTEM CRUD; CLERK/LA R | `NEVER_SHOW` |
 | `registrationPaymentSucceeded` | Registration payment succeeded | `PENDING_CASE_ISSUED` → | `CASE_ISSUED` | SYSTEM CRUD | `NEVER_SHOW` |
 | `registrationAuthorised` | Registration authorised | `CASE_ISSUED` → | `AWAITING_RESPONDENT_RESPONSE` | SYSTEM CRUD | `NEVER_SHOW` |
-| `verifyFormValidation` | Validate OOT application | `PENDING_CASE_ISSUED`, `CASE_ISSUED` | unchanged | CLERK CRU | Next step (clerk) |
+| `validateOotApplication` | Validate OOT application | `PENDING_CASE_ISSUED`, `CASE_ISSUED` | unchanged | CLERK CRU | Next step (clerk) |
 | `editTe9Application` | Edit TE9 application | all states | unchanged | CLERK CRU | Next step if `applicationForm="TE9"` |
 | `editPe3Application` | Edit PE3 application | all states | unchanged | CLERK CRU | Next step if `applicationForm="PE3"` |
 | `editTe7Application` | Edit TE7 application | all states | unchanged | CLERK CRU | Next step if `timeExtensionForm="TE7"` |
@@ -55,8 +55,8 @@ Use event ids from the catalogue. For form edits that should stay data-gated, wr
 
 | State | Clerk — current | Clerk — desired | LA — current | LA — desired |
 | --- | --- | --- | --- | --- |
-| `PENDING_CASE_ISSUED` | `verifyFormValidation`; form edits if matching form | | — | |
-| `CASE_ISSUED` | `verifyFormValidation`; form edits if matching form | | — | |
+| `PENDING_CASE_ISSUED` | `validateOotApplication`; form edits if matching form | | — | |
+| `CASE_ISSUED` | `validateOotApplication`; form edits if matching form | | — | |
 | `AWAITING_RESPONDENT_RESPONSE` | form edits if matching form | | — | Close case (in all states) |
 | `AWAITING_LA_OOT_RESPONSE` | form edits if matching form | | — | Acccept out of time or refuse out of time |
 | `CASE_REVOKED_IN_TIME` | form edits if matching form | - | — | - |
