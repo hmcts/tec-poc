@@ -1,0 +1,94 @@
+---
+title: State and event model
+weight: 22
+---
+
+# State and event model
+
+Hand-edited diagrams of the three case-type state machines, as implemented in `CaseState`, `BatchCaseState`, `ExceptionCaseState` and the `*Configuration` event handlers.
+
+Edit the Mermaid in this file (`tech_docs/source/state-event-model.html.md.erb`). Business writes for each event stay in [CCD architecture — States and events](/ccd-architecture.html#states-and-events). Who can see an event in ExUI stays in the [Next step events matrix](/next-step-events-matrix.html).
+
+## How to edit the diagrams
+
+- One diagram per case type.
+- Node ids are the Java enum constants.
+- An arrow label is the event id. A value in brackets is the field that selects that outcome, for example `applyWarrantAuthorisation [active]`.
+- An arrow that leaves the outer box is legal from every state inside it.
+- Draw a self-loop only when the handler returns that same state on purpose.
+- Leave `setCaseState` off the diagram. It is a system-only prototype event that sets a PCN to any `CaseState` (`bin/set-case-state.sh`).
+- Leave events that do not change state off the diagram. Record them in the tables below.
+
+## TEC
+
+```mermaid
+stateDiagram-v2
+    state TEC {
+        [*] --> PENDING_CASE_ISSUED: createTecCase
+        PENDING_CASE_ISSUED --> CASE_ISSUED: registrationPaymentSucceeded
+        CASE_ISSUED --> AWAITING_RESPONDENT_RESPONSE: registrationAuthorised
+    }
+
+    TEC --> WARRANT_AUTHORISATION_ISSUED: applyWarrantAuthorisation [active]
+    TEC --> WARRANT_AUTHORISATION_EXPIRED: applyWarrantAuthorisation [expired]
+    TEC --> REFER_FOR_ENFORCEMENT: linkBatchCase [TRANSFER_REQUEST]
+    TEC --> CLOSED: linkBatchCase [CASE_CLOSURE_REQUESTS]
+```
+
+The four arrows that leave the box are implemented for every `CaseState`, including the four states drawn outside the box. `applyWarrantAuthorisation` with status `cancelled` leaves the state unchanged. `linkBatchCase` for any other `BatchOperation` (`REGISTRATION`, `WARRANT_AUTH_REQUESTS`, `WARRANT_REISSUE_REQUESTS`, `OUT_OF_TIME_DECISIONS`, `CHANGE_OF_ADDRESS`) leaves the state unchanged. Transfer to enforcement is a `TEC_BATCH` of type `TRANSFER_REQUEST`, not a separate case type. Closure is the `CASE_CLOSURE_REQUESTS` link. There is no separate close event, and no payment-failure event.
+
+These `CaseState` values have no lifecycle event. Reach them with `setCaseState`:
+
+| State | Notes |
+| --- | --- |
+| `AWAITING_LA_OOT_RESPONSE` | Prototype via `setCaseState` |
+| `CASE_REVOKED_IN_TIME` | Prototype via `setCaseState` |
+| `CASE_REVOKED_OOT_ACCEPTED` | Prototype via `setCaseState` |
+| `CASE_REVOKED_LA_NO_RESPONSE` | Prototype via `setCaseState` |
+| `PENDING_REFUSAL_DECISION` | Prototype via `setCaseState` |
+| `REFUSAL_ORDER` | Prototype via `setCaseState` |
+| `CASE_REVOKED_LA_REFUSAL_OVERTURNED` | Prototype via `setCaseState` |
+| `PENDING_OOT_APPEAL_PAYMENT` | Prototype via `setCaseState` |
+| `OOT_APPEAL_PAYMENT_CONFIRMED` | Prototype via `setCaseState` |
+| `PENDING_OOT_APPEAL_DECISION` | Prototype via `setCaseState` |
+| `OOT_APPEAL_REFUSED` | Prototype via `setCaseState` |
+| `CASE_REVOKED_OOT_APPEAL_ACCEPTED` | Prototype via `setCaseState` |
+
+Events that keep the current PCN state:
+
+| Event | Allowed states | Notes |
+| --- | --- | --- |
+| `verifyFormValidation` | `PENDING_CASE_ISSUED`, `CASE_ISSUED` | Clerk Next step |
+| `editTe9Application` | all | Clerk Next step when `applicationForm` is `TE9` |
+| `editPe3Application` | all | Clerk Next step when `applicationForm` is `PE3` |
+| `editTe7Application` | all | Clerk Next step when `timeExtensionForm` is `TE7` |
+| `editPe2Application` | all | Clerk Next step when `timeExtensionForm` is `PE2` |
+| `recordApplication` | all | System, hidden |
+| `recordTimeExtension` | all | System, hidden |
+| `attachCaseFileDocument` | all | System, hidden |
+
+## TEC_BATCH
+
+```mermaid
+stateDiagram-v2
+    [*] --> QUEUED_FOR_PROCESSING: createBatch
+    [*] --> QUEUED_FOR_PROCESSING: uploadBatch
+    QUEUED_FOR_PROCESSING --> PROCESSING_STARTED: startBatchProcessing
+    PROCESSING_STARTED --> PROCESSING_COMPLETE: completeBatchProcessing
+    PROCESSING_STARTED --> PROCESSING_FAILED: failBatchProcessing
+    PROCESSING_COMPLETE --> PROCESSING_COMPLETE: completeBatchProcessing
+    PROCESSING_FAILED --> PROCESSING_FAILED: failBatchProcessing
+```
+
+`uploadBatch` is the clerk and local-authority create journey from ExUI primary navigation. `createBatch` is the hidden system create. Both start at `QUEUED_FOR_PROCESSING`.
+
+`attachBatchDocument` and `linkPcnCases` are allowed in every batch state and do not change it. A PCN is linked from the PCN side by `linkBatchCase`, then from the batch side by `linkPcnCases`.
+
+## TEC_EXCEPTION
+
+```mermaid
+stateDiagram-v2
+    [*] --> EXCEPTION_PENDING_REVIEW: createExceptionCase
+```
+
+`EXCEPTION_PENDING_REVIEW` is the only exception state. It belongs to `TEC_EXCEPTION`, not to the PCN `CaseState` catalogue. `rejectItem` and `editPcn` are clerk Next steps on that state and do not change it. Local authority has no access to this case type.

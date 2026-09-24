@@ -33,7 +33,7 @@ CFTLib makes the integration runnable locally.
 The relevant application classes are:
 
 - `TecCase`: the CCD-facing PCN data model.
-- `CaseState`: PCN lifecycle states generated into the CCD definition (see States and events).
+- `CaseState`: PCN lifecycle states generated into the CCD definition (see [State and event model](/state-event-model.html)).
 - `UserRole`: the system and clerk access profiles.
 - `TecCaseConfiguration`: the PCN case type, access, tabs, Case File View categories, search/work-basket
   fields, events and Java event handlers.
@@ -102,43 +102,8 @@ Fill Desired Next-step rules by role and state in
 
 ### States and events
 
-```mermaid
-stateDiagram-v2
-    [*] --> PENDING_CASE_ISSUED: createTecCase
-    PENDING_CASE_ISSUED --> CASE_ISSUED: registrationPaymentSucceeded
-    CASE_ISSUED --> AWAITING_RESPONDENT_RESPONSE: registrationAuthorised
-```
-
-Implemented lifecycle events only cover the path above. The full PCN `CaseState` catalogue (aligned with
-the future-state service blueprint) is:
-
-| State | Notes |
-| --- | --- |
-| `PENDING_CASE_ISSUED` | Create |
-| `CASE_ISSUED` | Payment succeeded |
-| `AWAITING_RESPONDENT_RESPONSE` | Registration authorised |
-| `AWAITING_LA_OOT_RESPONSE` | Prototype via `setCaseState` |
-| `CASE_REVOKED_IN_TIME` | Prototype via `setCaseState` |
-| `CASE_REVOKED_OOT_ACCEPTED` | Prototype via `setCaseState` |
-| `CASE_REVOKED_LA_NO_RESPONSE` | Prototype via `setCaseState` |
-| `PENDING_REFUSAL_DECISION` | Prototype via `setCaseState` |
-| `REFUSAL_ORDER` | Prototype via `setCaseState` |
-| `CASE_REVOKED_LA_REFUSAL_OVERTURNED` | Prototype via `setCaseState` |
-| `PENDING_OOT_APPEAL_PAYMENT` | Prototype via `setCaseState` |
-| `OOT_APPEAL_PAYMENT_CONFIRMED` | Prototype via `setCaseState` |
-| `PENDING_OOT_APPEAL_DECISION` | Prototype via `setCaseState` |
-| `OOT_APPEAL_REFUSED` | Prototype via `setCaseState` |
-| `CASE_REVOKED_OOT_APPEAL_ACCEPTED` | Prototype via `setCaseState` |
-| `WARRANT_AUTHORISATION_ISSUED` | `applyWarrantAuthorisation` with status `active` (also via `setCaseState`) |
-| `WARRANT_AUTHORISATION_EXPIRED` | `applyWarrantAuthorisation` with status `expired` (also via `setCaseState`) |
-| `REFER_FOR_ENFORCEMENT` | `linkBatchCase` with `TRANSFER_REQUEST` batch (also via `setCaseState`). Transfer work is a `TEC_BATCH`, not a separate case type |
-| `CLOSED` | `linkBatchCase` with `CASE_CLOSURE_REQUESTS` batch; also via `setCaseState`. No dedicated lifecycle close event yet |
-
-Local scripts can jump to any PCN state via the system-only `setCaseState` event /
-`bin/set-case-state.sh`. There is no payment-failure event in the current implementation.
-
-`EXCEPTION_PENDING_REVIEW` is an exception-case state (`TEC_EXCEPTION`), not a PCN state. Early
-blueprint drafts incorrectly listed it on the PCN state model.
+State diagrams, the prototype `CaseState` list, and events that leave state unchanged are maintained by hand in
+[State and event model](/state-event-model.html).
 
 The event handlers update TEC-owned data as follows:
 
