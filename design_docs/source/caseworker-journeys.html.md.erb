@@ -9,7 +9,7 @@ Journey boards for TEC caseworker review work. Frames reuse [TEC PCN blockframes
 
 ## Journey: Review an out-of-time validation failure
 
-Caseworker picks up a validation-failure task from **My work**, reviews the TE9/TE7 (or PE3/PE2) pair on Case details, compares scanned documents in Case File View, corrects OCR data via **Edit application** if needed, then completes **Validate application form**. **Form valid** revalidates against business rules; **Form invalid** lets them edit the rejection email. After submit they land on **History**.
+Caseworker picks up a validation-failure task from **My work**, reviews the TE9/TE7 (or PE3/PE2) pair on Case details, compares scanned documents in Case File View, corrects OCR data via **Edit application** if needed, then completes **Validate OOT application**. **Form valid** revalidates against business rules; **Form invalid** lets them edit the rejection email. After submit they land on **History**.
 
 <div class="bf-journey">
 <div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_my_tasks_minimal", locals: { caption: "1. My work — My tasks", compact: true, highlight_case: true } %><p class="bf-journey__note">Caseworker selects a task relating to a case and clicks the <strong>case reference</strong> link.</p></div>
@@ -24,7 +24,7 @@ Caseworker picks up a validation-failure task from **My work**, reviews the TE9/
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
 <div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_details", locals: { caption: "6. TEC PCN — Case details" } %><p class="bf-journey__note">After saving edits they return to Case details with the updated application sections.</p></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Next steps</span></div>
-<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_tasks", locals: { caption: "7. TEC PCN — Tasks", highlight: true, callout: true, highlight_step: :validate } %><p class="bf-journey__note">They complete the task by selecting <strong>Validate application form</strong> from Next steps.</p></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_tasks", locals: { caption: "7. TEC PCN — Tasks", highlight: true, callout: true, highlight_step: :validate } %><p class="bf-journey__note">They complete the task by selecting <strong>Validate OOT application</strong> from Next steps.</p></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Validate</span></div>
 <div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_validate_application", locals: { caption: "8. Event — Validate (Form valid)", result: :valid } %><p class="bf-journey__note">If the form has been corrected they select <strong>Form valid</strong>. The system revalidates the data against business rules.</p></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">or</span></div>

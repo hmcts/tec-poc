@@ -1146,7 +1146,7 @@ $bf-link-callout: #1a65a6;
   @include bf-bar-or-text($bf-text, 6px, 5px, 90%, 400, 100%);
 }
 
-// Event form column (Validate application form): half the page, compact fields.
+// Event form column (Validate OOT application): half the page, compact fields.
 .bf-form {
   display: flex;
   flex-direction: column;

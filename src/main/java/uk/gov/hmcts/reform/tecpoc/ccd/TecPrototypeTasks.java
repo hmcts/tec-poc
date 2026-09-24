@@ -46,12 +46,12 @@ final class TecPrototypeTasks {
             if (!formValidated) {
                 // Assigned to the demo user: shows Manage links + Next steps start-task link.
                 tasks.add(new PrototypeTask(
-                    "Validate application form",
+                    "Validate OOT application",
                     "High",
                     LocalDate.now().plusDays(2),
                     DEMO_USER,
                     List.of("Reassign", "Unassign", "Go to task"),
-                    List.of(new NextStep("Validate application form", "verifyFormValidation"))
+                    List.of(new NextStep("Validate OOT application", "verifyFormValidation"))
                 ));
             }
 
@@ -78,7 +78,7 @@ final class TecPrototypeTasks {
             ));
 
             List<NextStep> registrationNextSteps = new ArrayList<>();
-            registrationNextSteps.add(new NextStep("Validate application form", "verifyFormValidation"));
+            registrationNextSteps.add(new NextStep("Validate OOT application", "verifyFormValidation"));
             registrationNextSteps.addAll(editApplicationNextSteps(tecCase));
             registrationNextSteps.add(new NextStep("Review case details", null));
 

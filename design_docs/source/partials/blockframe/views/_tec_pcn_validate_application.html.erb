@@ -1,18 +1,18 @@
 <%#
-  TEC PCN — Validate application form event (journey wireframe).
+  TEC PCN — Validate OOT application event (journey wireframe).
   Uses ExUI form field primitives: FixedRadioList for Form valid / Form invalid,
   TextArea for the rejection email when invalid.
   Locals:
     caption — frame label
     result  — :valid (default) | :invalid
 %>
-<% caption = (defined?(caption) && caption) ? caption : "Event — Validate application form" %>
+<% caption = (defined?(caption) && caption) ? caption : "Event — Validate OOT application" %>
 <% result = (defined?(result) && result) ? result.to_sym : :valid %>
 <% invalid = result == :invalid %>
 <% selected = invalid ? 1 : 0 %>
 <% body_parts = [
   '<div class="bf-form">',
-  partial("partials/blockframe/text", locals: { size: :title, label: "Validate application form" }),
+  partial("partials/blockframe/text", locals: { size: :title, label: "Validate OOT application" }),
   partial("partials/blockframe/text", locals: {
     size: :medium,
     label: invalid ?

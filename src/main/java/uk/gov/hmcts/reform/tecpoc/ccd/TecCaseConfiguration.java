@@ -325,7 +325,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
 
         builder.decentralisedEvent("verifyFormValidation", this::verifyFormValidation)
             .forStates(CaseState.PENDING_CASE_ISSUED, CaseState.CASE_ISSUED)
-            .name("Validate application form")
+            .name("Validate OOT application")
             .grant(Permission.CRU, UserRole.CLERK)
             .fields()
             .mandatory(TecCase::getFormValidationResult)

@@ -27,14 +27,14 @@ Five application tabs from `TecCaseConfiguration` (plus CCD History after Case F
 
 ## Journey: Validate from Tasks
 
-Clerk opens a case, uses **Next steps** on an assigned task, completes **Validate application form**, then returns to Case details.
+Clerk opens a case, uses **Next steps** on an assigned task, completes **Validate OOT application**, then returns to Case details.
 
 Yellow outline (`highlight`) and link-blue (`callout`) mark the Next steps control that starts the journey. Hover blocks for element names.
 
 <div class="bf-journey">
 <div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_tasks", locals: { caption: "1. TEC PCN — Tasks", highlight: true, callout: true } %></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Next steps</span></div>
-<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_validate_form", locals: { caption: "2. Event — Validate application form" } %></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_validate_form", locals: { caption: "2. Event — Validate OOT application" } %></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
 <div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_details", locals: { caption: "3. TEC PCN — Case details" } %></div>
 </div>
@@ -44,7 +44,7 @@ Yellow outline (`highlight`) and link-blue (`callout`) mark the Next steps contr
 Same Tasks entry point; Next steps opens a form-specific edit event (TE9 / PE3 / TE7 / PE2 share one blockframe shape). After submit, Case details shows the updated sections.
 
 <div class="bf-journey">
-<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_tasks", locals: { caption: "1. TEC PCN — Tasks", highlight: true, callout: true } %><p class="bf-journey__note">Clerk opens the Tasks tab and chooses <strong>Edit application</strong> from Next steps on the assigned Validate application form task.</p></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_tasks", locals: { caption: "1. TEC PCN — Tasks", highlight: true, callout: true } %><p class="bf-journey__note">Clerk opens the Tasks tab and chooses <strong>Edit application</strong> from Next steps on the assigned Validate OOT application task.</p></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Next steps</span></div>
 <div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_edit_application", locals: { caption: "2. Event — Edit TE9 application" } %><p class="bf-journey__note">The edit event opens without case tabs. The clerk updates TE9 fields (date received, applicant, address, and related values), then continues.</p></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
@@ -76,7 +76,7 @@ The showcase frame below includes one control for each CCD field type used on ev
 
 ### Minimal
 
-Same Tasks shell as the catalogue, but only **Manage cases**, the **case number**, and the **Validate application form** task card have visible text. Everything else is empty bars with varied widths. All elements in that task card use callout styling.
+Same Tasks shell as the catalogue, but only **Manage cases**, the **case number**, and the **Validate OOT application** task card have visible text. Everything else is empty bars with varied widths. All elements in that task card use callout styling.
 
 The Case list frame mirrors ExUI `/cases`: **Case list** heading, **Hide Filter**, then a split with work-basket **filters** (heading + Apply/Reset, full-width fields, Back to top) on the left and **Your cases** (result count + table) on the right. The wide version uses a 6-column table (Case Number, PCN, local authority, respondent details 1, VRN, **State** at the far right); the compact version below matches the standard frame width with a 4-column table ending in **State**. Callouts: Manage cases, Case list, Filters, Case type (`TEC PCN`), Your cases, and Case Number (column + one row). Find case **search** results (not shown here) also include a **State** column after Case Number for `TEC`, `TEC_BATCH`, and `TEC_EXCEPTION`.
 
@@ -91,7 +91,7 @@ The Case list frame mirrors ExUI `/cases`: **Case list** heading, **Hide Filter*
 
 ### My work
 
-Mirrors ExUI **My work** → **My tasks**: **My work** heading, intro line, HMCTS sub-nav (**My tasks** active | Available tasks), then the task table. Columns match the live screen — Case reference, Case name, Case category, Location, Task, Date, and Manage. The compact version below uses four columns. Callouts: Manage cases, My work, My tasks, Case reference (column), Task (column + Validate application form), and TODAY. Case references and Manage are link-styled.
+Mirrors ExUI **My work** → **My tasks**: **My work** heading, intro line, HMCTS sub-nav (**My tasks** active | Available tasks), then the task table. Columns match the live screen — Case reference, Case name, Case category, Location, Task, Date, and Manage. The compact version below uses four columns. Callouts: Manage cases, My work, My tasks, Case reference (column), Task (column + Validate OOT application), and TODAY. Case references and Manage are link-styled.
 
 <div class="bf-catalogue">
 <%= partial "partials/blockframe/views/tec_my_tasks_minimal" %>

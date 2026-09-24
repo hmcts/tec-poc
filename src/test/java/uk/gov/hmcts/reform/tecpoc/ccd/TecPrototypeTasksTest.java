@@ -14,7 +14,7 @@ class TecPrototypeTasksTest {
 
         assertThat(markdown)
             .contains("<h2 class=\"govuk-heading-m\">Active tasks</h2>")
-            .contains("<strong>Validate application form</strong>")
+            .contains("<strong>Validate OOT application</strong>")
             .contains("Next steps")
             .contains("/cases/case-details/1788364399834478/trigger/verifyFormValidation")
             .contains("Assign to me")
@@ -34,7 +34,7 @@ class TecPrototypeTasksTest {
         String markdown = TecPrototypeTasks.markdownFor(1L, CaseState.CASE_ISSUED, tecCase);
 
         assertThat(markdown)
-            .doesNotContain("<strong>Validate application form</strong>")
+            .doesNotContain("<strong>Validate OOT application</strong>")
             .contains("<strong>Review issued case</strong>");
     }
 

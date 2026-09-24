@@ -1,11 +1,11 @@
 <%#
-  TEC PCN — Validate application form event (no case tabs).
+  TEC PCN — Validate OOT application event (no case tabs).
   Form column is half the page; field controls are sized for that column.
 %>
-<% caption = (defined?(caption) && caption) ? caption : "Event — Validate application form" %>
+<% caption = (defined?(caption) && caption) ? caption : "Event — Validate OOT application" %>
 <% body = [
   '<div class="bf-form">',
-  partial("partials/blockframe/text", locals: { size: :title, label: "Validate application form" }),
+  partial("partials/blockframe/text", locals: { size: :title, label: "Validate OOT application" }),
   partial("partials/blockframe/text", locals: { size: :medium, label: "Confirm the form validation result for this application." }),
   '<div class="bf-field" title="Form validation result field"><span class="bf-field__label" title="Form validation result (label)">Form validation result</span><span class="bf-field__input" title="Form validation result (input)"></span></div>',
   '<div class="bf-field" title="Form validation comment field"><span class="bf-field__label" title="Form validation comment (label)">Form validation comment</span><span class="bf-field__input" title="Form validation comment (input)"></span></div>',
