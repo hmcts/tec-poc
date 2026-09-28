@@ -22,55 +22,49 @@ Edit the Mermaid in this file (`tech_docs/source/state-event-model.html.md.erb`)
 ## TEC
 
 ```mermaid
-stateDiagram-v2
-
-        [*] --> PENDING_CASE_ISSUED: createTecCase
-        PENDING_CASE_ISSUED --> CASE_ISSUED: registrationPaymentSucceeded
-        CASE_ISSUED --> AWAITING_RESPONDENT_RESPONSE: registrationAuthorised
-        AWAITING_RESPONDENT_RESPONSE --> ELIGIBLE_FOR_WARRANT: when(>36 days since registration)
-        AWAITING_RESPONDENT_RESPONSE --> CASE_REVOKED_IN_TIME: InTimeApplicationReceivedValid
-        AWAITING_RESPONDENT_RESPONSE --> AWAITING_INTIME_VALIDATION: InTimeApplicationReceivedInvalid
-        AWAITING_RESPONDENT_RESPONSE --> AWAITING_LA_OOT_RESPONSE: OutOfTimeApplicationReceivedValid
-        AWAITING_RESPONDENT_RESPONSE --> AWAITING_OOT_VALIDATION: OutOfTimeApplicationReceivedInvalid
-        WARRANT_AUTHORISATION_ISSUED --> AWAITING_LA_OOT_RESPONSE: OutOfTimeApplicationReceivedValid
-        WARRANT_AUTHORISATION_ISSUED --> AWAITING_OOT_VALIDATION: OutOfTimeApplicationReceivedInvalid
-        AWAITING_INTIME_VALIDATION --> CASE_REVOKED_IN_TIME: InTimeApplicationValidated
-        AWAITING_INTIME_VALIDATION --> AWAITING_RESPONDENT_RESPONSE: InTimeApplicationRejected
-        AWAITING_OOT_VALIDATION --> AWAITING_LA_OOT_RESPONSE: OutOfTimeApplicationValidated
-        state return_after_OOT_rejection <<choice>>
-        AWAITING_OOT_VALIDATION --> return_after_OOT_rejection: OutOfTimeApplicationRejected
-        return_after_OOT_rejection --> WARRANT_AUTHORISATION_ISSUED: case has warrant auth
-        return_after_OOT_rejection --> ELIGIBLE_FOR_WARRANT: no warrant auth
-        ELIGIBLE_FOR_WARRANT --> WARRANT_AUTHORISATION_ISSUED: warrantAuthorisationRequested
-        AWAITING_LA_OOT_RESPONSE --> CASE_REVOKED_OOT_ACCEPTED: OOTAccepted
-        AWAITING_LA_OOT_RESPONSE --> PENDING_REFUSAL_DECISION: OOTRefused
-        PENDING_REFUSAL_DECISION --> REFUSAL_ORDER: OOTRefusalUpheld
-        PENDING_REFUSAL_DECISION --> CASE_REVOKED_LA_REFUSAL_OVERTURNED: OOTRefusalOverturned
-        WARRANT_AUTHORISATION_ISSUED --> WARRANT_AUTHORISATION_EXPIRED: when(expiry_date)
-        WARRANT_AUTHORISATION_EXPIRED --> WARRANT_AUTHORISATION_ISSUED: warrantReissueRequested
-        WARRANT_AUTHORISATION_ISSUED --> REFER_FOR_ENFORCEMENT: TE10received
-        CLOSED: linkBatchCase [CASE_CLOSURE_REQUESTS]
-        CLOSED: closeCase [*]
+---
+config:
+  layout: elk
+---
+stateDiagram
+  direction TB
+  [*] --> PENDING_CASE_ISSUED:createTecCase
+  PENDING_CASE_ISSUED --> CASE_ISSUED:registrationPaymentSucceeded
+  CASE_ISSUED --> AWAITING_RESPONDENT_RESPONSE:registrationAuthorised
+  AWAITING_RESPONDENT_RESPONSE --> ELIGIBLE_FOR_WARRANT:when(>36 days since registration)
+  AWAITING_RESPONDENT_RESPONSE --> CASE_REVOKED_IN_TIME:InTimeApplicationReceivedValid
+  AWAITING_RESPONDENT_RESPONSE --> AWAITING_INTIME_VALIDATION:InTimeApplicationReceivedInvalid
+  ELIGIBLE_FOR_WARRANT --> AWAITING_LA_OOT_RESPONSE:OutOfTimeApplicationReceivedValid
+  ELIGIBLE_FOR_WARRANT --> AWAITING_OOT_VALIDATION:OutOfTimeApplicationReceivedInvalid
+  WARRANT_AUTHORISATION_ISSUED --> AWAITING_LA_OOT_RESPONSE:OutOfTimeApplicationReceivedValid
+  WARRANT_AUTHORISATION_ISSUED --> AWAITING_OOT_VALIDATION:OutOfTimeApplicationReceivedInvalid
+  AWAITING_INTIME_VALIDATION --> CASE_REVOKED_IN_TIME:InTimeApplicationValidated
+  AWAITING_INTIME_VALIDATION --> AWAITING_RESPONDENT_RESPONSE:InTimeApplicationRejected
+  AWAITING_OOT_VALIDATION --> AWAITING_LA_OOT_RESPONSE:OutOfTimeApplicationValidated
+  AWAITING_OOT_VALIDATION --> ELIGIBLE_FOR_WARRANT:OutOfTimeApplicationRejected [no_warrant_auth]
+  AWAITING_OOT_VALIDATION --> WARRANT_AUTHORISATION_ISSUED:OutOfTimeApplicationRejected [has_warrant_auth]
+  PENDING_OOT_APPEAL_DECISION --> WARRANT_AUTHORISATION_ISSUED:refuseAppeal [is_respondent_appeal && has_warrant_auth]
+  PENDING_OOT_APPEAL_DECISION --> ELIGIBLE_FOR_WARRANT:refuse_appeal [is_respondent_appeal && no_warrant_auth]
+  PENDING_OOT_APPEAL_DECISION --> CASE_REVOKED_LA_REFUSAL_OVERTURNED:refuseAppeal [is_LA_appealing_overturned_refusal]
+  PENDING_OOT_APPEAL_DECISION --> CASE_REVOKED_LA_NO_RESPONSE:refuseAppeal [is_LA_appealing_no_response]
+  ELIGIBLE_FOR_WARRANT --> WARRANT_AUTHORISATION_ISSUED:warrantAuthorisationRequested
+  AWAITING_LA_OOT_RESPONSE --> CASE_REVOKED_OOT_ACCEPTED:OOTAccepted
+  AWAITING_LA_OOT_RESPONSE --> CASE_REVOKED_LA_NO_RESPONSE:when(deadline_passed)
+  AWAITING_LA_OOT_RESPONSE --> PENDING_REFUSAL_DECISION:OOTRefused
+  PENDING_REFUSAL_DECISION --> WARRANT_AUTHORISATION_ISSUED:OOTRefusalUpheld [has_warrant_auth]
+  PENDING_REFUSAL_DECISION --> ELIGIBLE_FOR_WARRANT:OOTRefusalUpheld [no_warrant_auth]
+  PENDING_REFUSAL_DECISION --> CASE_REVOKED_LA_REFUSAL_OVERTURNED:OOTRefusalOverturned
+  WARRANT_AUTHORISATION_ISSUED --> WARRANT_AUTHORISATION_EXPIRED:when(expiry_date)
+  WARRANT_AUTHORISATION_EXPIRED --> WARRANT_AUTHORISATION_ISSUED:warrantReissueRequested
+  WARRANT_AUTHORISATION_ISSUED --> REFER_FOR_ENFORCEMENT:TE10received
+  CASE_REVOKED_LA_REFUSAL_OVERTURNED --> PENDING_OOT_APPEAL_PAYMENT:generalApplicationReceived
+  CASE_REVOKED_LA_NO_RESPONSE --> PENDING_OOT_APPEAL_PAYMENT:generalApplicationReceived
+  ELIGIBLE_FOR_WARRANT --> PENDING_OOT_APPEAL_PAYMENT:generalApplicationReceived
+  WARRANT_AUTHORISATION_ISSUED --> PENDING_OOT_APPEAL_PAYMENT:generalApplicationReceived
+  PENDING_OOT_APPEAL_PAYMENT --> PENDING_OOT_APPEAL_DECISION:appealPaymentConfirmed
+  PENDING_OOT_APPEAL_DECISION --> CASE_REVOKED_OOT_APPEAL_ACCEPTED:AcceptAppeal
+  from_any_state --> CASECLOSED:closeCase
 ```
-
-The four arrows that leave the box are implemented for every `CaseState`, including the four states drawn outside the box. `applyWarrantAuthorisation` with status `cancelled` leaves the state unchanged. `linkBatchCase` for any other `BatchOperation` (`REGISTRATION`, `WARRANT_AUTH_REQUESTS`, `WARRANT_REISSUE_REQUESTS`, `OUT_OF_TIME_DECISIONS`, `CHANGE_OF_ADDRESS`) leaves the state unchanged. Transfer to enforcement is a `TEC_BATCH` of type `TRANSFER_REQUEST`, not a separate case type. Closure is the `CASE_CLOSURE_REQUESTS` link. There is no separate close event, and no payment-failure event.
-
-These `CaseState` values have no lifecycle event. Reach them with `setCaseState`:
-
-| State | Notes |
-| --- | --- |
-| `AWAITING_LA_OOT_RESPONSE` | Prototype via `setCaseState` |
-| `CASE_REVOKED_IN_TIME` | Prototype via `setCaseState` |
-| `CASE_REVOKED_OOT_ACCEPTED` | Prototype via `setCaseState` |
-| `CASE_REVOKED_LA_NO_RESPONSE` | Prototype via `setCaseState` |
-| `PENDING_REFUSAL_DECISION` | Prototype via `setCaseState` |
-| `REFUSAL_ORDER` | Prototype via `setCaseState` |
-| `CASE_REVOKED_LA_REFUSAL_OVERTURNED` | Prototype via `setCaseState` |
-| `PENDING_OOT_APPEAL_PAYMENT` | Prototype via `setCaseState` |
-| `OOT_APPEAL_PAYMENT_CONFIRMED` | Prototype via `setCaseState` |
-| `PENDING_OOT_APPEAL_DECISION` | Prototype via `setCaseState` |
-| `OOT_APPEAL_REFUSED` | Prototype via `setCaseState` |
-| `CASE_REVOKED_OOT_APPEAL_ACCEPTED` | Prototype via `setCaseState` |
 
 Events that keep the current PCN state:
 
