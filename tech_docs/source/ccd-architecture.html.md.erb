@@ -178,8 +178,8 @@ Blockframe wireframes of the case tabs and Next steps journeys: [TEC PCN blockfr
 Caseworker review boards (including the expanded out-of-time validation failure journey):
 [Caseworker journeys](/caseworker-journeys.html). Field-type catalogue: [ExUI form elements](/exui-form-elements.html).
 
-`TecCaseConfiguration` generates these tabs (History is declared explicitly as `CaseHistory` so it
-follows Case File View instead of the SDK default of prepending it):
+`TecCaseConfiguration` generates these tabs (History is declared explicitly as `CaseHistory` so the
+SDK does not prepend it):
 
 - **Tasks**: prototype task list for local UX exploration.
 - **Roles and access**: CCD shell tab so the label always appears in Manage Case. This is not ExUI's
@@ -206,7 +206,9 @@ follows Case File View instead of the SDK default of prepending it):
   Correspondence, Uncategorised) and registered via `builder.categories(...)` in
   `TecCaseConfiguration`. Documents appear when `TecCaseView` exposes `allDocuments` from
   `tec_case_document` with matching `category_id` values.
-- **History**: CCD case-event history (`CaseHistory` / `caseHistory`), placed after Case File View.
+- **Previous registrations**: stub tab immediately after Case File View. `TecCaseView` supplies
+  placeholder HTML in `previousRegistrationsMarkdown`. No registration history is loaded yet.
+- **History**: CCD case-event history (`CaseHistory` / `caseHistory`), placed after Previous registrations.
 - **Linked Cases**: ExUI `ComponentLauncher` + `caseLinks` collection (`#ARGUMENT(LinkedCases)`).
   Batch links are owned by the batch case (see below); a PCN can appear under ExUI **linked from**
   for more than one batch (e.g. registration and warrant auth) after each batch's `linkPcnCases`

@@ -374,4 +374,10 @@ public class TecCase {
 
     @CCD(label = "Tasks", searchable = false)
     private String tasksMarkdown;
+
+    /**
+     * Stub content for the Previous registrations tab. Populated by {@link TecCaseView}.
+     */
+    @CCD(label = "Previous registrations", searchable = false)
+    private String previousRegistrationsMarkdown;
 }

@@ -234,7 +234,11 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getCaseFileView, null, "#ARGUMENT(CaseFileView)")
             .field(TecCase::getAllDocuments, NEVER_SHOW);
 
-        // Explicit CaseHistory so History sits after Case File View (SDK otherwise prepends it).
+        builder.tab("previousRegistrations", "Previous registrations")
+            .label("previousRegistrationsLabel", null, "${previousRegistrationsMarkdown}")
+            .field("previousRegistrationsMarkdown", NEVER_SHOW);
+
+        // Explicit CaseHistory so History is not prepended by the SDK.
         builder.tab("CaseHistory", "History")
             .field("caseHistory");
 
