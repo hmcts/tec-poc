@@ -185,6 +185,11 @@ SDK does not prepend it):
 - **Roles and access**: CCD shell tab so the label always appears in Manage Case. This is not ExUI's
   Work Allocation / case access management UI (that is prepended only when WA is enabled for the
   jurisdiction).
+- **Parties**: shared Case Flags component, immediately after Roles and access. `flagLauncher` uses
+  `#ARGUMENT(READ)`, and the `parties` collection (field id must stay `parties`) uses
+  `#ARGUMENT(Flags)` when `flagLauncher` is present. `TecCaseView` supplies an empty launcher, empty
+  case-level `caseFlags`, and an empty `parties` list. No flag data is loaded, and there are no
+  create or manage flag events yet, so Request support and Manage support are not available.
 - **Case details**: view-only **State** at the top (from CCD state via `TecCaseView`), then a
   **Registration** section containing identifiers (including a **Batch case**
   `CaseLink` to the related registration `TEC_BATCH` case when `batch_case_reference` is set), local authority, respondent lines, vehicle/offence details,

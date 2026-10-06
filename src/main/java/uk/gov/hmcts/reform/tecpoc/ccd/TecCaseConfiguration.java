@@ -90,6 +90,12 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .label("rolesAndAccessLabel", null, "${rolesAndAccessMarkdown}")
             .field("rolesAndAccessMarkdown", NEVER_SHOW);
 
+        // Standard Case Flags component. No create/manage flag events yet.
+        builder.tab("parties", "Parties")
+            .field(TecCase::getFlagLauncher, null, "#ARGUMENT(READ)")
+            .field(TecCase::getCaseFlags, "flagLauncher!=\"\"")
+            .field(TecCase::getParties, "flagLauncher!=\"\"", "#ARGUMENT(Flags)");
+
         builder.tab("caseDetails", "Case details")
             .field(TecCase::getStatusDisplay)
             .label("registrationSection", null, "## Registration")

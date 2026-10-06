@@ -13,6 +13,8 @@ import uk.gov.hmcts.ccd.sdk.type.CaseLink;
 import uk.gov.hmcts.ccd.sdk.type.ComponentLauncher;
 import uk.gov.hmcts.ccd.sdk.type.Document;
 import uk.gov.hmcts.ccd.sdk.type.FieldType;
+import uk.gov.hmcts.ccd.sdk.type.FlagLauncher;
+import uk.gov.hmcts.ccd.sdk.type.Flags;
 import uk.gov.hmcts.ccd.sdk.type.ListValue;
 
 @Getter
@@ -364,6 +366,21 @@ public class TecCase {
      */
     @CCD(label = "Roles and access", searchable = false)
     private String rolesAndAccessMarkdown;
+
+    /**
+     * Case Flags component for the Parties tab. {@link TecCaseView} supplies empty
+     * values so ExUI can render the standard flags panel. No flag data is loaded yet.
+     * Field id {@code parties} must stay as-is: ExUI treats that collection as
+     * party-level flags ({@code #ARGUMENT(Flags)}).
+     */
+    @CCD(label = "Launch the flags screen", searchable = false)
+    private FlagLauncher flagLauncher;
+
+    @CCD(label = "Case Flags", searchable = false)
+    private Flags caseFlags;
+
+    @CCD(label = "Party", searchable = false)
+    private List<ListValue<Flags>> parties;
 
     @CCD(
         label = "Payment History",

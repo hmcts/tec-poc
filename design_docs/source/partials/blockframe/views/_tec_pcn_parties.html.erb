@@ -1,0 +1,10 @@
+<%#
+  TEC PCN — Parties tab (Case Flags standard component).
+%>
+<% caption = (defined?(caption) && caption) ? caption : "TEC PCN — Parties" %>
+<% body = [
+  partial("partials/blockframe/field", locals: { type: :flag_launcher, label: "Launch the flags screen" }),
+  partial("partials/blockframe/field", locals: { type: :flags, label: "Case Flags" }),
+  partial("partials/blockframe/field", locals: { type: :flags, label: "Party" })
+].join %>
+<%= partial "partials/blockframe/page", locals: { caption: caption, active: :parties, body: body } %>
