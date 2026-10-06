@@ -391,6 +391,36 @@ seed_catalogue() {
     "${ref}" \
     "After registration payment succeeded. Linked Cases shows the shared registration batch; Applications has an in-time TE9."
 
+  echo "Seeding pcn-awaiting-oot-validation..." >&2
+  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  link_pcn_to_batch "${ref}" "${reg_batch_ref}"
+  gen_application "${ref}" "out of time" TE9
+  gen_time_extension "${ref}" TE7
+  state="$(state_from_json_cmd AWAITING_OOT_VALIDATION \
+    "${SCRIPT_DIR}/set-case-state.sh" "${ref}" AWAITING_OOT_VALIDATION)"
+  record_entry \
+    "pcn-awaiting-oot-validation" \
+    "PCN — awaiting OOT validation" \
+    "TEC" \
+    "${state}" \
+    "${ref}" \
+    "Out-of-time application waiting for a clerk to check the forms. Applications has an OOT TE9 and a TE7. Next steps offers Edit TE9 application, Edit TE7 application, and Validate OOT application."
+
+  echo "Seeding pcn-awaiting-oot-validation-pe..." >&2
+  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  link_pcn_to_batch "${ref}" "${reg_batch_ref}"
+  gen_application "${ref}" "out of time" PE3
+  gen_time_extension "${ref}" PE2
+  state="$(state_from_json_cmd AWAITING_OOT_VALIDATION \
+    "${SCRIPT_DIR}/set-case-state.sh" "${ref}" AWAITING_OOT_VALIDATION)"
+  record_entry \
+    "pcn-awaiting-oot-validation-pe" \
+    "PCN — awaiting OOT validation (PE3 and PE2)" \
+    "TEC" \
+    "${state}" \
+    "${ref}" \
+    "Out-of-time statutory declaration waiting for a clerk to check the forms. Applications has an OOT PE3 and a PE2. Next steps offers Edit PE3 application, Edit PE2 application, and Validate OOT application."
+
   echo "Seeding pcn-awaiting-la-oot..." >&2
   ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"

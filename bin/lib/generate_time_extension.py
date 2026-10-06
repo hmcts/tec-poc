@@ -430,15 +430,17 @@ def fill_te7(template: Path, out_pdf: Path, payload: dict[str, Any]) -> None:
         set_checkbox(writer, page, capacity[0], capacity[1])
 
     include_signature = bool(payload.get("_pdfIncludeSignature", True))
-    width = float(page.mediabox.width)
-    height = float(page.mediabox.height)
-    packet = BytesIO()
-    c = canvas.Canvas(packet, pagesize=(width, height))
     if include_signature:
+        width = float(page.mediabox.width)
+        height = float(page.mediabox.height)
+        packet = BytesIO()
+        c = canvas.Canvas(packet, pagesize=(width, height))
         draw_signature_squiggle(c, TE7_SIGNATURE_BOX)
-    c.save()
-    packet.seek(0)
-    page.merge_page(PdfReader(packet).pages[0])
+        c.save()
+        packet.seek(0)
+        overlay_pages = PdfReader(packet).pages
+        if overlay_pages:
+            page.merge_page(overlay_pages[0])
 
     with out_pdf.open("wb") as handle:
         writer.write(handle)

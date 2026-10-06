@@ -101,6 +101,8 @@ state matrix. Prefer **real lifecycle scripts** where they exist; use
 | `batch-processing-failed` | `TEC_BATCH` | Warrant-auth failed (unlinked) | Inputs: `Batch file.xlsx` | `TARGET_STATE=PROCESSING_FAILED` warrantAuthRequests → attach |
 | `pcn-pending-case-issued` | `TEC` | Fresh registration, payment pending | none | create `-` → `link_pcn_to_batch` → shared registration |
 | `pcn-case-issued` | `TEC` | After registration payment | Applications: in-time TE9 | create → link registration → `transition-to-case-issued.sh` → TE9 |
+| `pcn-awaiting-oot-validation` | `TEC` | OOT application waiting for clerk validation | Applications: OOT TE9 + TE7 | create → link registration only → OOT apps → `AWAITING_OOT_VALIDATION` |
+| `pcn-awaiting-oot-validation-pe` | `TEC` | Same state with the PE form pair | Applications: OOT PE3 + PE2 | create → link registration only → OOT PE3 + PE2 → `AWAITING_OOT_VALIDATION` |
 | `pcn-awaiting-la-oot` | `TEC` | Waiting for LA OOT response (no OOT decision batch yet) | Applications: OOT TE9 + TE7 | create → link registration only → OOT apps → `AWAITING_LA_OOT_RESPONSE` |
 | `pcn-pending-refusal-decision` | `TEC` | OOT decision batch already associated | Applications: OOT TE9 + TE7; companion Inputs | create → link registration → create/attach `outOfTimeDecisions` → link → `PENDING_REFUSAL_DECISION` |
 | `pcn-pending-oot-appeal-payment` | `TEC` | OOT appeal awaiting payment | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; companion Inputs | create → link registration → create/attach `outOfTimeDecisions` → link → OOT apps → `PENDING_OOT_APPEAL_PAYMENT` → attach N244 |
@@ -116,10 +118,11 @@ state matrix. Prefer **real lifecycle scripts** where they exist; use
 
 Seed order: shared batches first (so link targets exist), then catalogue PCNs (companions
 created inline before each type-specific link), then filler PCNs on the shared registration
-batch. Every catalogue PCN links to `batch-registration-processed`. `AWAITING_LA_OOT_RESPONSE`
-is registration-only for Linked Cases — the LA response that will arrive *via* an
-`outOfTimeDecisions` batch is not linked yet; that link appears on `PENDING_REFUSAL_DECISION`
-and the five OOT-appeal demos (each also attaches `N244_0622.pdf` under Applications).
+batch. Every catalogue PCN links to `batch-registration-processed`. `AWAITING_OOT_VALIDATION`
+and `AWAITING_LA_OOT_RESPONSE` are registration-only for Linked Cases — the LA response that
+will arrive *via* an `outOfTimeDecisions` batch is not linked yet; that link appears on
+`PENDING_REFUSAL_DECISION` and the five OOT-appeal demos (each also attaches `N244_0622.pdf`
+under Applications).
 
 Every seeded `TEC_BATCH` gets `bin/templates/Batch file.xlsx` under Inputs via
 `attach_standard_batch_inputs`. Transfer-request batches also get `TE10.png`.
@@ -201,6 +204,24 @@ link_pcn_to_batch "${ref}" "${reg_batch_ref}"
 state="$(state_from_json_cmd CASE_ISSUED "${SCRIPT_DIR}/transition-to-case-issued.sh" "${ref}")"
 gen_application "${ref}" "in time" TE9
 record_entry "pcn-case-issued" "…" "TEC" "${state}" "${ref}" "…"
+
+# Awaiting OOT validation — registration only, OOT TE9 + TE7
+ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+link_pcn_to_batch "${ref}" "${reg_batch_ref}"
+gen_application "${ref}" "out of time" TE9
+gen_time_extension "${ref}" TE7
+state="$(state_from_json_cmd AWAITING_OOT_VALIDATION \
+  "${SCRIPT_DIR}/set-case-state.sh" "${ref}" AWAITING_OOT_VALIDATION)"
+record_entry "pcn-awaiting-oot-validation" "…" "TEC" "${state}" "${ref}" "…"
+
+# Awaiting OOT validation — registration only, OOT PE3 + PE2
+ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+link_pcn_to_batch "${ref}" "${reg_batch_ref}"
+gen_application "${ref}" "out of time" PE3
+gen_time_extension "${ref}" PE2
+state="$(state_from_json_cmd AWAITING_OOT_VALIDATION \
+  "${SCRIPT_DIR}/set-case-state.sh" "${ref}" AWAITING_OOT_VALIDATION)"
+record_entry "pcn-awaiting-oot-validation-pe" "…" "TEC" "${state}" "${ref}" "…"
 
 # Awaiting LA OOT — registration only (no outOfTimeDecisions link yet)
 ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"

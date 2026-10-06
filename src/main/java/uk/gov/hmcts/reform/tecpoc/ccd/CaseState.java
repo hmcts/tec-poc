@@ -13,6 +13,9 @@ public enum CaseState {
     @CCD(label = "Awaiting Respondent Response", hint = "### Case number: ${[CASE_REFERENCE]}")
     AWAITING_RESPONDENT_RESPONSE,
 
+    @CCD(label = "Awaiting OOT Validation", hint = "### Case number: ${[CASE_REFERENCE]}")
+    AWAITING_OOT_VALIDATION,
+
     @CCD(label = "Awaiting LA OOT Response", hint = "### Case number: ${[CASE_REFERENCE]}")
     AWAITING_LA_OOT_RESPONSE,
 

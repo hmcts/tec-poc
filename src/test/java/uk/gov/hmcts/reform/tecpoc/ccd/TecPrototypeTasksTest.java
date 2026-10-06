@@ -73,6 +73,67 @@ class TecPrototypeTasksTest {
     }
 
     @Test
+    void shouldOfferFormEditsAndValidateOotApplicationWhileAwaitingOotValidation() {
+        TecCase tecCase = new TecCase();
+        tecCase.setApplicationForm(ApplicationForm.TE9);
+        tecCase.setTimeExtensionForm(TimeExtensionForm.TE7);
+
+        String markdown = TecPrototypeTasks.markdownFor(
+            1L,
+            CaseState.AWAITING_OOT_VALIDATION,
+            tecCase
+        );
+
+        assertThat(markdown)
+            .contains("<strong>Validate OOT application</strong>")
+            .contains("/cases/case-details/1/trigger/verifyFormValidation")
+            .contains("/cases/case-details/1/trigger/editTe9Application")
+            .contains("/cases/case-details/1/trigger/editTe7Application")
+            .doesNotContain("editPe3Application")
+            .doesNotContain("editPe2Application");
+    }
+
+    @Test
+    void shouldOfferPeFormEditsWhileAwaitingOotValidation() {
+        TecCase tecCase = new TecCase();
+        tecCase.setApplicationForm(ApplicationForm.PE3);
+        tecCase.setTimeExtensionForm(TimeExtensionForm.PE2);
+
+        String markdown = TecPrototypeTasks.markdownFor(
+            1L,
+            CaseState.AWAITING_OOT_VALIDATION,
+            tecCase
+        );
+
+        assertThat(markdown)
+            .contains("/cases/case-details/1/trigger/verifyFormValidation")
+            .contains("/cases/case-details/1/trigger/editPe3Application")
+            .contains("/cases/case-details/1/trigger/editPe2Application")
+            .doesNotContain("editTe9Application")
+            .doesNotContain("editTe7Application");
+    }
+
+    @Test
+    void shouldHideFormEditNextStepsWhileAwaitingLaOotResponse() {
+        TecCase tecCase = new TecCase();
+        tecCase.setApplicationForm(ApplicationForm.TE9);
+        tecCase.setTimeExtensionForm(TimeExtensionForm.PE2);
+
+        String markdown = TecPrototypeTasks.markdownFor(
+            1L,
+            CaseState.AWAITING_LA_OOT_RESPONSE,
+            tecCase
+        );
+
+        assertThat(markdown)
+            .contains("There are no active tasks for this case.")
+            .doesNotContain("Edit TE9 application")
+            .doesNotContain("Edit PE2 application")
+            .doesNotContain("editTe9Application")
+            .doesNotContain("editPe2Application");
+    }
+
+    @Test
     void shouldShowEmptyMessageWhenNoTasksApply() {
         TecCase tecCase = new TecCase();
 

@@ -79,7 +79,7 @@ final class TecPrototypeTasks {
 
             List<NextStep> registrationNextSteps = new ArrayList<>();
             registrationNextSteps.add(new NextStep("Validate OOT application", "verifyFormValidation"));
-            registrationNextSteps.addAll(editApplicationNextSteps(tecCase));
+            registrationNextSteps.addAll(editApplicationNextSteps(state, tecCase));
             registrationNextSteps.add(new NextStep("Review case details", null));
 
             // Assigned to demo user with multiple Next steps links.
@@ -103,7 +103,21 @@ final class TecPrototypeTasks {
             ));
         }
 
-        for (NextStep editStep : editApplicationNextSteps(tecCase)) {
+        if (state == CaseState.AWAITING_OOT_VALIDATION) {
+            List<NextStep> validationNextSteps = new ArrayList<>();
+            validationNextSteps.addAll(editApplicationNextSteps(state, tecCase));
+            validationNextSteps.add(new NextStep("Validate OOT application", "verifyFormValidation"));
+            tasks.add(new PrototypeTask(
+                "Validate OOT application",
+                "High",
+                LocalDate.now().plusDays(2),
+                DEMO_USER,
+                List.of("Reassign", "Unassign", "Go to task"),
+                validationNextSteps
+            ));
+        }
+
+        for (NextStep editStep : editApplicationNextSteps(state, tecCase)) {
             tasks.add(new PrototypeTask(
                 editStep.label(),
                 "Medium",
@@ -117,7 +131,10 @@ final class TecPrototypeTasks {
         return tasks;
     }
 
-    private static List<NextStep> editApplicationNextSteps(TecCase tecCase) {
+    private static List<NextStep> editApplicationNextSteps(CaseState state, TecCase tecCase) {
+        if (state == CaseState.AWAITING_LA_OOT_RESPONSE) {
+            return List.of();
+        }
         List<NextStep> steps = new ArrayList<>();
         if (tecCase.getApplicationForm() == ApplicationForm.TE9) {
             steps.add(new NextStep("Edit TE9 application", "editTe9Application"));

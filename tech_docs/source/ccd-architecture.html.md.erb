@@ -158,9 +158,13 @@ sought; **Application to file out of time** for PE2).
 
 `editTe9Application`, `editPe3Application`, `editTe7Application`, and `editPe2Application` are
 clerk-facing and appear in Manage Case Next steps only when the matching form is on the case
-(`applicationForm` or `timeExtensionForm`). Each presents the editable fields for that form on a
-single page so caseworkers can correct OCR data. Penalty charge number and form validation result
-are not shown and are not changed by these events.
+(`applicationForm` or `timeExtensionForm`). They are not offered in `AWAITING_LA_OOT_RESPONSE`.
+In `AWAITING_OOT_VALIDATION` the clerk Next step menu also includes **Validate OOT application**
+(`verifyFormValidation`), alongside whichever of those edit events match the forms on the case
+(TE9 with TE7, or PE3 with PE2).
+Each presents the editable fields for that form on a single page so caseworkers can correct OCR
+data. Penalty charge number and form validation result are not shown and are not changed by these
+events.
 
 `applyWarrantAuthorisation` is system-only and hidden from ExUI. It appends one warrant
 authorisation (date of issue, date of expiry, status) to `public.tec_case_warrant_authorisation`
@@ -251,7 +255,8 @@ HTML from `TecCaseView`. It does not call role-assignment or allocate-access API
 | Start-task links | Next steps links to `/cases/case-details/{ref}/trigger/{eventId}` (for example `verifyFormValidation`) |
 
 When a case is in `CASE_ISSUED`, the tab shows a mix of unassigned, assigned-to-you and assigned-to-someone-else cards
-so Manage and Next steps layouts can be compared.
+so Manage and Next steps layouts can be compared. In `AWAITING_OOT_VALIDATION`, the assigned task's Next steps
+include the form edits that match the case (TE9 and TE7, or PE3 and PE2) and **Validate OOT application**.
 
 Case-scoped Tasks HTML is not the place for Upload batch file. That belongs in ExUI primary
 navigation via `menuConfigs` — see [exui-manage-batches-plan](/exui-manage-batches-plan.html) and

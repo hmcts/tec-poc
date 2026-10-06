@@ -334,7 +334,11 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .mandatory(TecCase::getRegistrationDocument);
 
         builder.decentralisedEvent("verifyFormValidation", this::verifyFormValidation)
-            .forStates(CaseState.PENDING_CASE_ISSUED, CaseState.CASE_ISSUED)
+            .forStates(
+                CaseState.PENDING_CASE_ISSUED,
+                CaseState.CASE_ISSUED,
+                CaseState.AWAITING_OOT_VALIDATION
+            )
             .name("Validate OOT application")
             .grant(Permission.CRU, UserRole.CLERK)
             .fields()
@@ -342,7 +346,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .optional(TecCase::getFormValidationComment);
 
         builder.decentralisedEvent("editTe9Application", this::editTe9Application)
-            .forStates(CaseState.values())
+            .forStates(formEditStates())
             .name("Edit TE9 application")
             .description("Update TE9 application details")
             .showCondition("applicationForm=\"TE9\"")
@@ -366,7 +370,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .optional(TecCase::getApplicationPaidTo, "applicationDeclaration=\"paidInFull\"");
 
         builder.decentralisedEvent("editPe3Application", this::editPe3Application)
-            .forStates(CaseState.values())
+            .forStates(formEditStates())
             .name("Edit PE3 application")
             .description("Update PE3 application details")
             .showCondition("applicationForm=\"PE3\"")
@@ -391,7 +395,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .optional(TecCase::getApplicationPaidTo, "applicationDeclaration=\"paidInFull\"");
 
         builder.decentralisedEvent("editTe7Application", this::editTe7Application)
-            .forStates(CaseState.values())
+            .forStates(formEditStates())
             .name("Edit TE7 application")
             .description("Update TE7 time-extension details")
             .showCondition("timeExtensionForm=\"TE7\"")
@@ -412,7 +416,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .optional(TecCase::getTimeExtensionPrintFullName);
 
         builder.decentralisedEvent("editPe2Application", this::editPe2Application)
-            .forStates(CaseState.values())
+            .forStates(formEditStates())
             .name("Edit PE2 application")
             .description("Update PE2 time-extension details")
             .showCondition("timeExtensionForm=\"PE2\"")
@@ -683,6 +687,12 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             );
         }
         return response(target);
+    }
+
+    private static CaseState[] formEditStates() {
+        return Arrays.stream(CaseState.values())
+            .filter(state -> state != CaseState.AWAITING_LA_OOT_RESPONSE)
+            .toArray(CaseState[]::new);
     }
 
     private static boolean isBlank(String value) {

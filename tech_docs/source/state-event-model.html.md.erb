@@ -70,11 +70,11 @@ Events that keep the current PCN state:
 
 | Event | Allowed states | Notes |
 | --- | --- | --- |
-| `validateOotApplication` | `PENDING_CASE_ISSUED`, `CASE_ISSUED` | Clerk Next step |
-| `editTe9Application` | all | Clerk Next step when `applicationForm` is `TE9` |
-| `editPe3Application` | all | Clerk Next step when `applicationForm` is `PE3` |
-| `editTe7Application` | all | Clerk Next step when `timeExtensionForm` is `TE7` |
-| `editPe2Application` | all | Clerk Next step when `timeExtensionForm` is `PE2` |
+| `validateOotApplication` | `PENDING_CASE_ISSUED`, `CASE_ISSUED`, `AWAITING_OOT_VALIDATION` | Clerk Next step |
+| `editTe9Application` | all except `AWAITING_LA_OOT_RESPONSE` | Clerk Next step when `applicationForm` is `TE9` |
+| `editPe3Application` | all except `AWAITING_LA_OOT_RESPONSE` | Clerk Next step when `applicationForm` is `PE3` |
+| `editTe7Application` | all except `AWAITING_LA_OOT_RESPONSE` | Clerk Next step when `timeExtensionForm` is `TE7` |
+| `editPe2Application` | all except `AWAITING_LA_OOT_RESPONSE` | Clerk Next step when `timeExtensionForm` is `PE2` |
 | `recordApplication` | all | System, hidden |
 | `recordTimeExtension` | all | System, hidden |
 | `attachCaseFileDocument` | all | System, hidden |
