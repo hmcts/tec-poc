@@ -234,10 +234,6 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getCaseFileView, null, "#ARGUMENT(CaseFileView)")
             .field(TecCase::getAllDocuments, NEVER_SHOW);
 
-        builder.tab("previousRegistrations", "Previous registrations")
-            .label("previousRegistrationsLabel", null, "${previousRegistrationsMarkdown}")
-            .field("previousRegistrationsMarkdown", NEVER_SHOW);
-
         // Explicit CaseHistory so History is not prepended by the SDK.
         builder.tab("CaseHistory", "History")
             .field("caseHistory");
@@ -252,6 +248,10 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
 
         builder.tab("paymentHistory", "Payment History")
             .field(TecCase::getCasePaymentHistoryViewer);
+
+        builder.tab("previousRegistrations", "Previous registrations")
+            .label("previousRegistrationsLabel", null, "${previousRegistrationsMarkdown}")
+            .field("previousRegistrationsMarkdown", NEVER_SHOW);
 
         builder.searchInputFields()
             .field(TecCase::getPenaltyChargeNumber, "Penalty charge number")

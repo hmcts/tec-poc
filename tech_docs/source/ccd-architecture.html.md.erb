@@ -206,9 +206,7 @@ SDK does not prepend it):
   Correspondence, Uncategorised) and registered via `builder.categories(...)` in
   `TecCaseConfiguration`. Documents appear when `TecCaseView` exposes `allDocuments` from
   `tec_case_document` with matching `category_id` values.
-- **Previous registrations**: stub tab immediately after Case File View. `TecCaseView` supplies
-  placeholder HTML in `previousRegistrationsMarkdown`. No registration history is loaded yet.
-- **History**: CCD case-event history (`CaseHistory` / `caseHistory`), placed after Previous registrations.
+- **History**: CCD case-event history (`CaseHistory` / `caseHistory`), placed after Case File View.
 - **Linked Cases**: ExUI `ComponentLauncher` + `caseLinks` collection (`#ARGUMENT(LinkedCases)`).
   Batch links are owned by the batch case (see below); a PCN can appear under ExUI **linked from**
   for more than one batch (e.g. registration and warrant auth) after each batch's `linkPcnCases`
@@ -216,6 +214,8 @@ SDK does not prepend it):
   `batch_case_reference`) remains the registration batch only.
 - **Payment History**: CCD tab hosting the shared `CasePaymentHistoryViewer` field (ccpay case
   transactions UI). Local content depends on Payments being wired for TEC.
+- **Previous registrations**: stub tab immediately after Payment History. `TecCaseView` supplies
+  placeholder HTML in `previousRegistrationsMarkdown`. No registration history is loaded yet.
 
 Search and work-basket inputs are penalty charge number and local authority (CCD `FixedList` of the 2023
 England councils — ExUI has no generic autosuggest for this control). **Search** results include the case
