@@ -1,24 +1,20 @@
 <%#
-  Case officer review of an out-of-time refusal (design-only event).
+  Case officer review of an out-of-time refusal.
   Locals:
     caption
-    decision — :agree (default) | :overturn
 %>
-<% decision = (defined?(decision) && decision) ? decision.to_sym : :agree %>
-<% agreeing = decision != :overturn %>
-<% page_title = agreeing ? "Agree with OOT refusal" : "Overturn OOT refusal" %>
-<% question = agreeing ?
-  "Are you sure you want to Agree with the out of time refusal?" :
-  "Are you sure you want to overturn the out of time refusal?" %>
+<% page_title = "Review OOT refusal decision" %>
+<% body_text = "The LA has decided to refuse this application. Should their decision be upheld or overturned? Overturning their refusal decision will immediately revoke the case." %>
 <% caption = (defined?(caption) && caption) ? caption : "Event — #{page_title}" %>
 <% body = [
   '<div class="bf-form bf-form--full">',
   partial("partials/blockframe/text", locals: { size: :title, label: page_title, callout: true }),
+  partial("partials/blockframe/text", locals: { size: :medium, label: body_text }),
   partial("partials/blockframe/field", locals: {
-    type: :yes_or_no,
-    label: question,
-    title: "#{question} — YesOrNo",
-    options: ["Yes", "No"],
+    type: :fixed_radio_list,
+    label: "Decision",
+    title: "Decision — FixedRadioList",
+    options: ["Uphold decision", "Overturn decision"],
     selected: -1,
     callout: true
   }),

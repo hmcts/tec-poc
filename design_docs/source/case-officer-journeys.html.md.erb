@@ -9,18 +9,16 @@ Journey boards for case officer review work. Frames reuse [TEC PCN blockframes](
 
 ## Journey: Review OOT decision
 
-The case officer opens a case from **My work**, reviews it on **Case details**, and chooses **Agree with OOT refusal** or **Overturn OOT refusal** from Next step. The next screen asks them to confirm. Submitting returns them to Case details with a success banner under the Manage Cases bar.
+The case officer opens a case from **My work**, reviews it on **Case details**, and chooses **Review OOT refusal decision** from Next step. The next screen asks whether the local authority's refusal should be upheld or overturned. Submitting returns them to Case details with a success banner under the Manage Cases bar.
 
 <div class="bf-journey">
 <div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_my_tasks_minimal", locals: { caption: "1. My work — My tasks", compact: true, highlight_case: true } %><p class="bf-journey__note">The journey starts on My work. The case officer selects the task and clicks the <strong>case number</strong>.</p></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Case link</span></div>
-<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_details", locals: { caption: "2. TEC PCN — Case details", highlight_next_step: true } %><p class="bf-journey__note">They open the case on the <strong>Case details</strong> tab and choose <strong>Agree with OOT refusal</strong> or <strong>Overturn OOT refusal</strong> from Next step.</p></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_details", locals: { caption: "2. TEC PCN — Case details", highlight_next_step: true, show_oot_refusal_decision: true } %><p class="bf-journey__note">They open the case on the <strong>Case details</strong> tab. Under Registration, <strong>Out of time application decision</strong> shows <strong>Decision</strong> <strong>Refused</strong>. They choose <strong>Review OOT refusal decision</strong> from Next step.</p></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Next step</span></div>
-<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_co_oot_review", locals: { caption: "3. Agree with OOT refusal", decision: :agree } %><p class="bf-journey__note">The screen is titled <strong>Agree with OOT refusal</strong>. The Yes/No question asks whether they are sure they want to Agree with the out of time refusal.</p></div>
-<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">or</span></div>
-<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_co_oot_review", locals: { caption: "4. Overturn OOT refusal", decision: :overturn } %><p class="bf-journey__note">The screen is titled <strong>Overturn OOT refusal</strong>. The Yes/No question asks whether they are sure they want to overturn the out of time refusal.</p></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_co_oot_review", locals: { caption: "3. Review OOT refusal decision" } %><p class="bf-journey__note">The screen is titled <strong>Review OOT refusal decision</strong>. It explains that the local authority has refused the application, and the radios are <strong>Uphold decision</strong> and <strong>Overturn decision</strong>.</p></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Submit</span></div>
-<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_details", locals: { caption: "5. TEC PCN — Case details", success_banner: "You have agreed with the out of time refusal" } %><p class="bf-journey__note">Submitting returns them to <strong>Case details</strong>. A success banner under the Manage Cases bar confirms the decision: agreed with the out of time refusal, or the refusal was overturned.</p></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_details", locals: { caption: "4. TEC PCN — Case details", success_banner: "You have reviewed the out of time refusal" } %><p class="bf-journey__note">Submitting returns them to <strong>Case details</strong>. Overturning the refusal revokes the case. Upholding it returns the case to warrant authorisation issued when an active warrant is already on the case.</p></div>
 </div>
 
 ## Related

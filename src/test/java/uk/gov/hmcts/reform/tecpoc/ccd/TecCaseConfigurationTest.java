@@ -3,6 +3,11 @@ package uk.gov.hmcts.reform.tecpoc.ccd;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -121,6 +126,53 @@ class TecCaseConfigurationTest {
     }
 
     @Test
+    void reviewOotRefusalDecisionOverturnRevokesTheCase() {
+        TecCase data = new TecCase();
+        data.setOotRefusalReviewDecision(OotRefusalReviewDecision.OVERTURN);
+
+        SubmitResponse<CaseState> response = reviewOotRefusalDecision(4L, data);
+
+        assertThat(response.getState()).isEqualTo(CaseState.CASE_REVOKED_LA_REFUSAL_OVERTURNED);
+    }
+
+    @Test
+    void reviewOotRefusalDecisionUpholdReturnsToIssuedWarrantWhenOneIsActive() {
+        when(repository.findWarrantAuthorisations(5L)).thenReturn(List.of(
+            new TecCaseWarrantAuthorisation(
+                UUID.fromString("11111111-1111-1111-1111-111111111111"),
+                LocalDate.of(2026, 9, 22),
+                LocalDate.of(2027, 9, 22),
+                WarrantAuthorisationStatus.ACTIVE
+            )
+        ));
+        TecCase data = new TecCase();
+        data.setOotRefusalReviewDecision(OotRefusalReviewDecision.UPHOLD);
+
+        SubmitResponse<CaseState> response = reviewOotRefusalDecision(5L, data);
+
+        assertThat(response.getState()).isEqualTo(CaseState.WARRANT_AUTHORISATION_ISSUED);
+    }
+
+    @Test
+    void reviewOotRefusalDecisionUpholdStaysPendingWhenNoActiveWarrant() {
+        when(repository.findWarrantAuthorisations(6L)).thenReturn(List.of());
+        TecCase data = new TecCase();
+        data.setOotRefusalReviewDecision(OotRefusalReviewDecision.UPHOLD);
+
+        SubmitResponse<CaseState> response = reviewOotRefusalDecision(6L, data);
+
+        assertThat(response.getState()).isEqualTo(CaseState.PENDING_REFUSAL_DECISION);
+    }
+
+    @Test
+    void reviewOotRefusalDecisionRequiresAChoice() {
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> reviewOotRefusalDecision(7L, new TecCase())
+        );
+    }
+
+    @Test
     void applyWarrantAuthorisationPersistsAuthorisation() {
         WarrantAuthorisation authorisation = new WarrantAuthorisation();
         authorisation.setDateOfIssue(java.time.LocalDate.of(2026, 9, 22));
@@ -225,6 +277,15 @@ class TecCaseConfigurationTest {
         org.junit.jupiter.api.Assertions.assertThrows(
             IllegalArgumentException.class,
             () -> setCaseState(16L, data)
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    private SubmitResponse<CaseState> reviewOotRefusalDecision(long caseReference, TecCase data) {
+        return (SubmitResponse<CaseState>) ReflectionTestUtils.invokeMethod(
+            configuration,
+            "reviewOotRefusalDecision",
+            new EventPayload<>(caseReference, data, null)
         );
     }
 

@@ -51,9 +51,9 @@ stateDiagram
   AWAITING_LA_OOT_RESPONSE --> CASE_REVOKED_OOT_ACCEPTED:OOTAccepted
   AWAITING_LA_OOT_RESPONSE --> CASE_REVOKED_LA_NO_RESPONSE:when(deadline_passed)
   AWAITING_LA_OOT_RESPONSE --> PENDING_REFUSAL_DECISION:OOTRefused
-  PENDING_REFUSAL_DECISION --> WARRANT_AUTHORISATION_ISSUED:OOTRefusalUpheld [has_warrant_auth]
-  PENDING_REFUSAL_DECISION --> ELIGIBLE_FOR_WARRANT:OOTRefusalUpheld [no_warrant_auth]
-  PENDING_REFUSAL_DECISION --> CASE_REVOKED_LA_REFUSAL_OVERTURNED:OOTRefusalOverturned
+  PENDING_REFUSAL_DECISION --> WARRANT_AUTHORISATION_ISSUED:reviewOotRefusalDecision [uphold && active warrant]
+  PENDING_REFUSAL_DECISION --> ELIGIBLE_FOR_WARRANT:reviewOotRefusalDecision [uphold && no active warrant]
+  PENDING_REFUSAL_DECISION --> CASE_REVOKED_LA_REFUSAL_OVERTURNED:reviewOotRefusalDecision [overturn]
   WARRANT_AUTHORISATION_ISSUED --> WARRANT_AUTHORISATION_EXPIRED:when(expiry_date)
   WARRANT_AUTHORISATION_EXPIRED --> WARRANT_AUTHORISATION_ISSUED:warrantReissueRequested
   WARRANT_AUTHORISATION_ISSUED --> REFER_FOR_ENFORCEMENT:TE10received
@@ -65,6 +65,8 @@ stateDiagram
   PENDING_OOT_APPEAL_DECISION --> CASE_REVOKED_OOT_APPEAL_ACCEPTED:AcceptAppeal
   from_any_state --> CASECLOSED:closeCase
 ```
+
+`reviewOotRefusalDecision` is the clerk Next step in `PENDING_REFUSAL_DECISION`. Overturning moves the case to `CASE_REVOKED_LA_REFUSAL_OVERTURNED`. Upholding moves it to `WARRANT_AUTHORISATION_ISSUED` when an active warrant authorisation exists. The no-warrant destination on the diagram (`ELIGIBLE_FOR_WARRANT`) is not a `CaseState`, so upholding in that situation leaves the case in `PENDING_REFUSAL_DECISION`.
 
 Events that keep the current PCN state:
 

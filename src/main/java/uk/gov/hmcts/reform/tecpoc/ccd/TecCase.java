@@ -128,6 +128,24 @@ public class TecCase {
     @CCD(label = "Registration date")
     private LocalDate registrationDate;
 
+    /**
+     * Case-view display for the local authority's out-of-time refusal. Populated by
+     * {@link TecCaseView} only while the case is {@link CaseState#PENDING_REFUSAL_DECISION}.
+     */
+    @CCD(label = "Decision", searchable = false)
+    private String ootApplicationDecisionDisplay;
+
+    /**
+     * Event-only choice for {@code reviewOotRefusalDecision}. Not shown on Case details.
+     */
+    @CCD(
+        label = "Decision",
+        typeOverride = FieldType.FixedRadioList,
+        typeParameterOverride = "OotRefusalReviewDecision",
+        searchable = false
+    )
+    private OotRefusalReviewDecision ootRefusalReviewDecision;
+
     @CCD(
         label = "Form validation result",
         typeOverride = FieldType.FixedRadioList,

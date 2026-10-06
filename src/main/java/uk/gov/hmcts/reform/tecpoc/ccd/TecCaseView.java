@@ -33,7 +33,11 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
         tecCase.setBatchLinkCase(null);
         tecCase.setBatchLinkType(null);
         tecCase.setStatusDisplay(stateLabel(request.state()));
+        tecCase.setOotRefusalReviewDecision(null);
         tecCase.setOotRejectionEmail(null);
+        if (request.state() == CaseState.PENDING_REFUSAL_DECISION) {
+            tecCase.setOotApplicationDecisionDisplay("Refused");
+        }
         tecCase.setTasksMarkdown(
             TecPrototypeTasks.markdownFor(request.caseRef(), request.state(), tecCase)
         );

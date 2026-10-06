@@ -90,7 +90,8 @@ ExUI Case list / Find case expose a **case type** filter. Fresh sessions prefera
 (import order + alphabetical id); ExUI may remember the last selection in `localStorage` — see
 [exui-navigation](/exui-navigation.html).
 
-Most system events use `[STATE]="NEVER_SHOW"`. Clerk-visible PCN events include `verifyFormValidation`
+Most system events use `[STATE]="NEVER_SHOW"`. Clerk-visible PCN events include `verifyFormValidation`,
+`reviewOotRefusalDecision` (only in `PENDING_REFUSAL_DECISION`),
 and the form-specific edit events (`editTe9Application`, `editPe3Application`, `editTe7Application`,
 `editPe2Application`) — these are **not** granted to LOCAL_AUTHORITY. Upload batch file is the
 clerk- and LA-visible `uploadBatch` event on `TEC_BATCH`, linked from ExUI primary nav (not as a
@@ -170,6 +171,14 @@ Each presents the editable fields for that form on a single page so caseworkers 
 data. Penalty charge number and form validation result are not shown and are not changed by these
 events.
 
+`reviewOotRefusalDecision` is a clerk Next step while the case is `PENDING_REFUSAL_DECISION`.
+Its one screen explains that the local authority has refused the application and asks whether
+that decision should be upheld or overturned. **Overturn decision** moves the case to
+`CASE_REVOKED_LA_REFUSAL_OVERTURNED`. **Uphold decision** moves it to `WARRANT_AUTHORISATION_ISSUED`
+when an active warrant authorisation is already on the case; otherwise the case stays in
+`PENDING_REFUSAL_DECISION` because the state model’s no-warrant destination (`ELIGIBLE_FOR_WARRANT`)
+is not a `CaseState`.
+
 `applyWarrantAuthorisation` is system-only and hidden from ExUI. It appends one warrant
 authorisation (date of issue, date of expiry, status) to `public.tec_case_warrant_authorisation`
 and sets PCN state to `WARRANT_AUTHORISATION_ISSUED` (`active`) or `WARRANT_AUTHORISATION_EXPIRED`
@@ -202,7 +211,8 @@ SDK does not prepend it):
   **Registration** section containing identifiers (including a **Batch case**
   `CaseLink` to the related registration `TEC_BATCH` case when `batch_case_reference` is set), local authority, respondent lines, vehicle/offence details,
   certificate date, amount, and registration workflow fields (payment status/reference, closure reason, registration
-  document and date); an application section headed by form and timeliness
+  document and date); when the case is **Pending refusal decision**, an **Out of time application decision**
+  section immediately below Registration with **Decision** **Refused**; an application section headed by form and timeliness
   (**Witness statement** or **Statutory declaration**, each **In time** or **Out of time**) with
   **Form validation result** at the top, then OCR-extracted TE9/PE3 data (date received, type, form, PCN/VRN,
   applicant and address fields, declaration, and conditional fields such as TE7 submitted, PE3 reasons

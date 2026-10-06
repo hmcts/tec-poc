@@ -453,7 +453,7 @@ seed_catalogue() {
     "TEC" \
     "${state}" \
     "${ref}" \
-    "Linked Cases shows the shared registration batch and an out-of-time decisions companion. Applications has OOT TE9 and TE7."
+    "Linked Cases shows the shared registration batch and an out-of-time decisions companion. Applications has OOT TE9 and TE7. Case details shows Out of time application decision (Refused) under Registration. Next step includes Review OOT refusal decision."
 
   echo "Seeding pcn-pending-oot-appeal-payment..." >&2
   ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"

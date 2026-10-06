@@ -8,6 +8,7 @@
     highlight_next_step — yellow outline on the Next step dropdown
     nav — passed to chrome (e.g. :local_authority)
     success_banner — success message shown below the ExUI bar
+    show_oot_refusal_decision — when true, show Out of time application decision under Registration
 %>
 <% caption = (defined?(caption) && caption) ? caption : "TEC PCN — Case details" %>
 <% validation_errors = (defined?(validation_errors) && validation_errors) ? validation_errors : false %>
@@ -15,6 +16,7 @@
 <% highlight_next_step = (defined?(highlight_next_step) && highlight_next_step) ? highlight_next_step : false %>
 <% nav = (defined?(nav) && nav) ? nav : nil %>
 <% success_banner = (defined?(success_banner) && success_banner) ? success_banner : nil %>
+<% show_oot_refusal_decision = (defined?(show_oot_refusal_decision) && show_oot_refusal_decision) ? show_oot_refusal_decision : false %>
 <% application_title = validation_errors ? "Witness statement — Out of time (TE9)" : "Witness statement — In time" %>
 <% time_extension_title = validation_errors ? "Application to file out of time (TE7)" : "Application to file out of time" %>
 <% validation_value = validation_errors ?
@@ -37,6 +39,12 @@
   '<div class="bf-kv" title="Payment status"><span class="bf-kv__key">Payment status</span><span class="bf-kv__value" style="width: 30%"></span></div>',
   '<div class="bf-kv" title="Registration document"><span class="bf-kv__key">Registration document</span><span class="bf-kv__value" style="width: 52%"></span></div>',
   "</div>",
+  (show_oot_refusal_decision ? [
+    '<div class="bf-section" title="Out of time application decision section">',
+    partial("partials/blockframe/text", locals: { size: :title, label: "Out of time application decision", callout: true }),
+    '<div class="bf-kv" title="Decision"><span class="bf-kv__key bf-callout">Decision</span><span class="bf-kv__value bf-callout" title="Decision value">Refused</span></div>',
+    "</div>"
+  ].join : ""),
   '<div class="bf-section" title="Application section">',
   partial("partials/blockframe/text", locals: { size: :title, label: application_title, callout: validation_errors }),
   %(<div class="bf-kv" title="Form validation result"><span class="bf-kv__key#{validation_errors ? ' bf-callout' : ''}">Form validation result</span>#{validation_value}</div>),

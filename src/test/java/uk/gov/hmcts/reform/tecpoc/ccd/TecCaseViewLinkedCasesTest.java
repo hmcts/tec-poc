@@ -41,5 +41,21 @@ class TecCaseViewLinkedCasesTest {
         assertThat(result.getCaseFlags()).isNotNull();
         assertThat(result.getParties()).isEmpty();
         assertThat(result.getStatusDisplay()).isEqualTo("Case Issued");
+        assertThat(result.getOotApplicationDecisionDisplay()).isNull();
+    }
+
+    @Test
+    void getCaseShowsRefusedOotDecisionWhilePendingRefusalDecision() {
+        TecCase stored = new TecCase();
+        when(repository.find(222L)).thenReturn(stored);
+        when(repository.findDocuments(222L)).thenReturn(List.of());
+        when(repository.findWarrantAuthorisations(222L)).thenReturn(List.of());
+
+        TecCase result = view.getCase(
+            new CaseViewRequest<>(222L, CaseState.PENDING_REFUSAL_DECISION)
+        );
+
+        assertThat(result.getOotApplicationDecisionDisplay()).isEqualTo("Refused");
+        assertThat(result.getOotRefusalReviewDecision()).isNull();
     }
 }

@@ -23,6 +23,10 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
 
     public static final String CASE_TYPE = "TEC";
     private static final String NEVER_SHOW = "[STATE]=\"NEVER_SHOW\"";
+    private static final String PENDING_REFUSAL_DECISION = "[STATE]=\"PENDING_REFUSAL_DECISION\"";
+    private static final String REVIEW_OOT_REFUSAL_BODY =
+        "The LA has decided to refuse this application. Should their decision be upheld or "
+            + "overturned? Overturning their refusal decision will immediately revoke the case.";
 
     /**
      * GOV.UK Notify personalisation for the respondent's name. Notify substitutes
@@ -131,6 +135,12 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getClosureReason)
             .field(TecCase::getRegistrationDocument)
             .field(TecCase::getRegistrationDate)
+            .label(
+                "ootApplicationDecisionSection",
+                PENDING_REFUSAL_DECISION,
+                "## Out of time application decision"
+            )
+            .field(TecCase::getOotApplicationDecisionDisplay, PENDING_REFUSAL_DECISION)
             .label(
                 "applicationsSectionTe9InTime",
                 "applicationForm=\"TE9\" AND applicationType=\"inTime\"",
@@ -363,6 +373,19 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .showCondition("formValidationResult=\"formInvalid\"")
             .optional(TecCase::getOotRejectionEmail);
 
+        builder.decentralisedEvent("reviewOotRefusalDecision", this::reviewOotRefusalDecision)
+            .forStates(CaseState.PENDING_REFUSAL_DECISION)
+            .name("Review OOT refusal decision")
+            .grant(Permission.CRU, UserRole.CLERK)
+            .fields()
+            .page("review")
+            .pageLabel("Review OOT refusal decision")
+            .label(
+                "reviewOotRefusalDecisionBody",
+                "<p class=\"govuk-body\">" + REVIEW_OOT_REFUSAL_BODY + "</p>"
+            )
+            .mandatory(TecCase::getOotRefusalReviewDecision);
+
         builder.decentralisedEvent("editTe9Application", this::editTe9Application)
             .forStates(formEditStates())
             .name("Edit TE9 application")
@@ -556,6 +579,27 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             LocalDate.now()
         );
         return response(CaseState.AWAITING_RESPONDENT_RESPONSE);
+    }
+
+    private SubmitResponse<CaseState> reviewOotRefusalDecision(EventPayload<TecCase, CaseState> event) {
+        OotRefusalReviewDecision decision = event.caseData().getOotRefusalReviewDecision();
+        if (decision == null) {
+            throw new IllegalArgumentException("ootRefusalReviewDecision is required");
+        }
+        return switch (decision) {
+            case OVERTURN -> response(CaseState.CASE_REVOKED_LA_REFUSAL_OVERTURNED);
+            case UPHOLD -> response(stateAfterUpheldRefusal(event.caseReference()));
+        };
+    }
+
+    private CaseState stateAfterUpheldRefusal(long caseReference) {
+        boolean activeWarrant = repository.findWarrantAuthorisations(caseReference).stream()
+            .anyMatch(authorisation -> authorisation.status() == WarrantAuthorisationStatus.ACTIVE);
+        if (activeWarrant) {
+            return CaseState.WARRANT_AUTHORISATION_ISSUED;
+        }
+        // ELIGIBLE_FOR_WARRANT is not a CaseState yet.
+        return CaseState.PENDING_REFUSAL_DECISION;
     }
 
     AboutToStartOrSubmitResponse<TecCase, CaseState> draftOotRejectionEmail(
