@@ -43,12 +43,6 @@ public enum BatchTypeOption implements HasLabel {
     CASE_CLOSURE_REQUESTS(
         BatchOperation.CASE_CLOSURE_REQUESTS,
         "Request closure of PCN cases in bulk"
-    ),
-
-    @JsonProperty("transferRequest")
-    TRANSFER_REQUEST(
-        BatchOperation.TRANSFER_REQUEST,
-        "Request transfer of PCNs for enforcement"
     );
 
     private final BatchOperation operation;

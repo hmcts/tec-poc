@@ -215,13 +215,12 @@ class BatchUploadJourneyTest {
 
         assertThat(BatchOperation.TRANSFER_REQUEST.getLabel())
             .isEqualTo("Transfer request");
-        assertThat(BatchTypeOption.TRANSFER_REQUEST.getLabel())
-            .isEqualTo("Transfer request — Request transfer of PCNs for enforcement");
-        assertThat(BatchTypeOption.TRANSFER_REQUEST.toOperation())
-            .isEqualTo(BatchOperation.TRANSFER_REQUEST);
+        assertThat(BatchTypeOption.values())
+            .extracting(BatchTypeOption::toOperation)
+            .doesNotContain(BatchOperation.TRANSFER_REQUEST);
         BatchTypeOption[] options = BatchTypeOption.values();
         assertThat(options[options.length - 1])
-            .isEqualTo(BatchTypeOption.TRANSFER_REQUEST);
+            .isEqualTo(BatchTypeOption.CASE_CLOSURE_REQUESTS);
     }
 
     @Test
