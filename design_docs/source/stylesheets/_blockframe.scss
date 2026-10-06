@@ -907,6 +907,16 @@ $bf-link-callout: #1a65a6;
 
 .bf-field__input--textarea {
   height: 36px;
+
+  &.bf-field__input--with-value {
+    height: auto;
+    min-height: 36px;
+    padding: 3px 4px;
+    color: $bf-text;
+    font-size: 7px;
+    line-height: 1.35;
+    white-space: pre-wrap;
+  }
 }
 
 .bf-field__input--narrow {
@@ -1180,6 +1190,11 @@ $bf-link-callout: #1a65a6;
 
   .bf-field__input--textarea {
     height: 20px;
+
+    &.bf-field__input--with-value {
+      height: auto;
+      min-height: 48px;
+    }
   }
 
   .bf-field__input--narrow {

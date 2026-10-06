@@ -161,7 +161,11 @@ clerk-facing and appear in Manage Case Next steps only when the matching form is
 (`applicationForm` or `timeExtensionForm`). They are not offered in `AWAITING_LA_OOT_RESPONSE`.
 In `AWAITING_OOT_VALIDATION` the clerk Next step menu also includes **Validate OOT application**
 (`verifyFormValidation`), alongside whichever of those edit events match the forms on the case
-(TE9 with TE7, or PE3 with PE2).
+(TE9 with TE7, or PE3 with PE2). The event's first page asks whether the form is valid. **Form
+invalid** continues to a second page headed **Edit rejection email**, with a text box prefilled
+with a short draft to the respondent. The draft uses the GOV.UK Notify placeholder
+`((respondent_name))` and says the application has been rejected because it is not valid.
+**Form valid** skips that page.
 Each presents the editable fields for that form on a single page so caseworkers can correct OCR
 data. Penalty charge number and form validation result are not shown and are not changed by these
 events.

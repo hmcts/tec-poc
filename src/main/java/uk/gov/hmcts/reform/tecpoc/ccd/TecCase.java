@@ -139,6 +139,13 @@ public class TecCase {
     private String formValidationComment;
 
     /**
+     * Event-only draft for {@code verifyFormValidation} when the clerk marks the form invalid.
+     * Not stored on the case; the submitted text is copied into the event description.
+     */
+    @CCD(label = "Rejection email", typeOverride = FieldType.TextArea, searchable = false)
+    private String ootRejectionEmail;
+
+    /**
      * Case-view display for form validation at the top of the TE9/PE3 section. Always populated so
      * ExUI shows the row even when {@link #formValidationResult} is unset
      * ({@code @JsonInclude(NON_NULL)} would otherwise omit it).

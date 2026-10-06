@@ -7,7 +7,9 @@ import static org.mockito.Mockito.verify;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import uk.gov.hmcts.ccd.sdk.api.CaseDetails;
 import uk.gov.hmcts.ccd.sdk.api.EventPayload;
+import uk.gov.hmcts.ccd.sdk.api.callback.AboutToStartOrSubmitResponse;
 import uk.gov.hmcts.ccd.sdk.api.callback.SubmitResponse;
 
 class TecCaseConfigurationTest {
@@ -57,6 +59,64 @@ class TecCaseConfigurationTest {
         SubmitResponse<CaseState> response = verifyFormValidation(3L, data);
 
         verify(repository).recordFormValidation(3L, FormValidationResult.FORM_VALID);
+        assertThat(response.getEventMetadata()).isNull();
+    }
+
+    @Test
+    void draftOotRejectionEmailPrefillsNotifyDraftWhenFormInvalid() {
+        TecCase data = new TecCase();
+        data.setFormValidationResult(FormValidationResult.FORM_INVALID);
+
+        AboutToStartOrSubmitResponse<TecCase, CaseState> response = draftOotRejectionEmail(data);
+
+        assertThat(response.getData().getOotRejectionEmail())
+            .isEqualTo(TecCaseConfiguration.OOT_REJECTION_EMAIL_DRAFT)
+            .contains("((respondent_name))")
+            .contains("Your application has been rejected because it is not valid.");
+    }
+
+    @Test
+    void draftOotRejectionEmailKeepsAnEditedEmail() {
+        TecCase data = new TecCase();
+        data.setFormValidationResult(FormValidationResult.FORM_INVALID);
+        data.setOotRejectionEmail("Dear ((respondent_name)),\n\nEdited.");
+
+        AboutToStartOrSubmitResponse<TecCase, CaseState> response = draftOotRejectionEmail(data);
+
+        assertThat(response.getData().getOotRejectionEmail()).isEqualTo("Dear ((respondent_name)),\n\nEdited.");
+    }
+
+    @Test
+    void draftOotRejectionEmailClearsDraftWhenFormValid() {
+        TecCase data = new TecCase();
+        data.setFormValidationResult(FormValidationResult.FORM_VALID);
+        data.setOotRejectionEmail(TecCaseConfiguration.OOT_REJECTION_EMAIL_DRAFT);
+
+        AboutToStartOrSubmitResponse<TecCase, CaseState> response = draftOotRejectionEmail(data);
+
+        assertThat(response.getData().getOotRejectionEmail()).isNull();
+    }
+
+    @Test
+    void verifyFormValidationRecordsRejectionEmailWhenCommentBlank() {
+        TecCase data = new TecCase();
+        data.setFormValidationResult(FormValidationResult.FORM_INVALID);
+        data.setOotRejectionEmail("  " + TecCaseConfiguration.OOT_REJECTION_EMAIL_DRAFT + "  ");
+
+        SubmitResponse<CaseState> response = verifyFormValidation(8L, data);
+
+        assertThat(response.getEventMetadata().getDescription())
+            .isEqualTo(TecCaseConfiguration.OOT_REJECTION_EMAIL_DRAFT);
+    }
+
+    @Test
+    void verifyFormValidationIgnoresRejectionEmailWhenFormValid() {
+        TecCase data = new TecCase();
+        data.setFormValidationResult(FormValidationResult.FORM_VALID);
+        data.setOotRejectionEmail(TecCaseConfiguration.OOT_REJECTION_EMAIL_DRAFT);
+
+        SubmitResponse<CaseState> response = verifyFormValidation(9L, data);
+
         assertThat(response.getEventMetadata()).isNull();
     }
 
@@ -166,6 +226,13 @@ class TecCaseConfigurationTest {
             IllegalArgumentException.class,
             () -> setCaseState(16L, data)
         );
+    }
+
+    private AboutToStartOrSubmitResponse<TecCase, CaseState> draftOotRejectionEmail(TecCase data) {
+        CaseDetails<TecCase, CaseState> details = CaseDetails.<TecCase, CaseState>builder()
+            .data(data)
+            .build();
+        return configuration.draftOotRejectionEmail(details, null);
     }
 
     @SuppressWarnings("unchecked")

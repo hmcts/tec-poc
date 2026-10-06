@@ -1,7 +1,7 @@
 <%#
   TEC PCN — Validate OOT application event (journey wireframe).
-  Uses ExUI form field primitives: FixedRadioList for Form valid / Form invalid,
-  TextArea for the rejection email when invalid.
+  Uses ExUI form field primitives: FixedRadioList for Form valid / Form invalid.
+  Form invalid continues to Edit rejection email (tec_pcn_edit_rejection_email).
   Locals:
     caption — frame label
     result  — :valid (default) | :invalid
@@ -16,7 +16,7 @@
   partial("partials/blockframe/text", locals: {
     size: :medium,
     label: invalid ?
-      "Confirm the form is invalid and edit the rejection email." :
+      "Confirm the form is invalid. Continue to edit the rejection email." :
       "Confirm the form validation result. Form valid revalidates against business rules."
   }),
   partial("partials/blockframe/field", locals: {
@@ -27,13 +27,6 @@
     callout: true
   })
 ] %>
-<% if invalid %>
-<% body_parts << partial("partials/blockframe/field", locals: {
-  type: :textarea,
-  label: "Rejection email",
-  title: "Rejection email — textarea"
-}) %>
-<% end %>
 <% body_parts.concat([
   '<div class="bf-actions"><span class="bf-action bf-action--secondary" title="Previous"></span><span class="bf-action bf-action--primary" title="Continue"></span></div>',
   '</div>'

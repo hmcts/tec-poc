@@ -3,10 +3,12 @@ package uk.gov.hmcts.reform.tecpoc.ccd;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import uk.gov.hmcts.ccd.sdk.api.CCDConfig;
+import uk.gov.hmcts.ccd.sdk.api.CaseDetails;
 import uk.gov.hmcts.ccd.sdk.api.DecentralisedConfigBuilder;
 import uk.gov.hmcts.ccd.sdk.api.EventMetadata;
 import uk.gov.hmcts.ccd.sdk.api.EventPayload;
 import uk.gov.hmcts.ccd.sdk.api.Permission;
+import uk.gov.hmcts.ccd.sdk.api.callback.AboutToStartOrSubmitResponse;
 import uk.gov.hmcts.ccd.sdk.api.callback.SubmitResponse;
 import uk.gov.hmcts.ccd.sdk.type.CaseLink;
 import uk.gov.hmcts.ccd.sdk.type.Document;
@@ -21,6 +23,16 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
 
     public static final String CASE_TYPE = "TEC";
     private static final String NEVER_SHOW = "[STATE]=\"NEVER_SHOW\"";
+
+    /**
+     * GOV.UK Notify personalisation for the respondent's name. Notify substitutes
+     * {@code ((respondent_name))} when the email is sent.
+     */
+    static final String OOT_REJECTION_EMAIL_DRAFT = """
+        Dear ((respondent_name)),
+
+        Your application has been rejected because it is not valid.
+        """.stripIndent().trim();
 
     private final TecCaseRepository repository;
     private final BatchCaseRepository batchCaseRepository;
@@ -342,8 +354,14 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .name("Validate OOT application")
             .grant(Permission.CRU, UserRole.CLERK)
             .fields()
+            .page("validate", this::draftOotRejectionEmail)
+            .pageLabel("Validate OOT application")
             .mandatory(TecCase::getFormValidationResult)
-            .optional(TecCase::getFormValidationComment);
+            .optional(TecCase::getFormValidationComment)
+            .page("editRejectionEmail")
+            .pageLabel("Edit rejection email")
+            .showCondition("formValidationResult=\"formInvalid\"")
+            .optional(TecCase::getOotRejectionEmail);
 
         builder.decentralisedEvent("editTe9Application", this::editTe9Application)
             .forStates(formEditStates())
@@ -540,18 +558,57 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
         return response(CaseState.AWAITING_RESPONDENT_RESPONSE);
     }
 
+    AboutToStartOrSubmitResponse<TecCase, CaseState> draftOotRejectionEmail(
+        CaseDetails<TecCase, CaseState> details,
+        CaseDetails<TecCase, CaseState> detailsBefore
+    ) {
+        TecCase data = details.getData();
+        if (data == null) {
+            data = new TecCase();
+            details.setData(data);
+        }
+        if (data.getFormValidationResult() == FormValidationResult.FORM_INVALID) {
+            if (data.getOotRejectionEmail() == null || data.getOotRejectionEmail().isBlank()) {
+                data.setOotRejectionEmail(OOT_REJECTION_EMAIL_DRAFT);
+            }
+        } else {
+            data.setOotRejectionEmail(null);
+        }
+        return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
+            .data(data)
+            .build();
+    }
+
     private SubmitResponse<CaseState> verifyFormValidation(EventPayload<TecCase, CaseState> event) {
         repository.recordFormValidation(
             event.caseReference(),
             event.caseData().getFormValidationResult()
         );
-        String comment = event.caseData().getFormValidationComment();
-        if (comment == null || comment.isBlank()) {
+        String description = eventDescription(event.caseData());
+        if (description == null) {
             return SubmitResponse.defaultResponse();
         }
         return SubmitResponse.<CaseState>builder()
-            .eventMetadata(EventMetadata.builder().description(comment.trim()).build())
+            .eventMetadata(EventMetadata.builder().description(description).build())
             .build();
+    }
+
+    private static String eventDescription(TecCase data) {
+        String comment = blankToNull(data.getFormValidationComment());
+        if (comment != null) {
+            return comment;
+        }
+        if (data.getFormValidationResult() != FormValidationResult.FORM_INVALID) {
+            return null;
+        }
+        return blankToNull(data.getOotRejectionEmail());
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private SubmitResponse<CaseState> attachCaseFileDocument(EventPayload<TecCase, CaseState> event) {

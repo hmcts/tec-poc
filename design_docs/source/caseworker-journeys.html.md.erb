@@ -9,7 +9,7 @@ Journey boards for TEC caseworker review work. Frames reuse [TEC PCN blockframes
 
 ## Journey: Review an out-of-time validation failure
 
-Caseworker picks up a validation-failure task from **My work**, reviews the TE9/TE7 (or PE3/PE2) pair on Case details, compares scanned documents in Case File View, corrects OCR data via **Edit application** if needed, then completes **Validate OOT application**. **Form valid** revalidates against business rules; **Form invalid** lets them edit the rejection email. After submit they land on **History**.
+Caseworker picks up a validation-failure task from **My work**, reviews the TE9/TE7 (or PE3/PE2) pair on Case details, compares scanned documents in Case File View, corrects OCR data via **Edit application** if needed, then completes **Validate OOT application**. **Form valid** revalidates against business rules; **Form invalid** continues to **Edit rejection email**, where they can change a draft email to the respondent. After submit they land on **History**.
 
 <div class="bf-journey">
 <div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_my_tasks_minimal", locals: { caption: "1. My work — My tasks", compact: true, highlight_case: true } %><p class="bf-journey__note">Caseworker selects a task relating to a case and clicks the <strong>case reference</strong> link.</p></div>
@@ -28,9 +28,11 @@ Caseworker picks up a validation-failure task from **My work**, reviews the TE9/
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Validate</span></div>
 <div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_validate_application", locals: { caption: "8. Event — Validate (Form valid)", result: :valid } %><p class="bf-journey__note">If the form has been corrected they select <strong>Form valid</strong>. The system revalidates the data against business rules.</p></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">or</span></div>
-<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_validate_application", locals: { caption: "9. Event — Validate (Form invalid)", result: :invalid } %><p class="bf-journey__note">If they select <strong>Form invalid</strong> they can edit the rejection email sent back to the defendant in a textarea.</p></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_validate_application", locals: { caption: "9. Event — Validate (Form invalid)", result: :invalid } %><p class="bf-journey__note">If they select <strong>Form invalid</strong> and continue, the next screen is the rejection email.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_edit_rejection_email", locals: { caption: "10. Event — Edit rejection email" } %><p class="bf-journey__note">The page is headed <strong>Edit rejection email</strong>. The text box contains a draft to the respondent, with the GOV.UK Notify placeholder <strong>((respondent_name))</strong>, saying the application has been rejected because it is not valid.</p></div>
 <div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Submit</span></div>
-<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_history", locals: { caption: "10. TEC PCN — History" } %><p class="bf-journey__note">After submitting the form the user is returned to Case history.</p></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_history", locals: { caption: "11. TEC PCN — History" } %><p class="bf-journey__note">After submitting the form the user is returned to Case history.</p></div>
 </div>
 
 ## Journey: Review an in-time application validation failure

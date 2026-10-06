@@ -1,0 +1,20 @@
+<%#
+  TEC PCN — Edit rejection email (Validate OOT application, Form invalid).
+  Locals:
+    caption — frame label
+%>
+<% caption = (defined?(caption) && caption) ? caption : "Event — Edit rejection email" %>
+<% draft = "Dear ((respondent_name)),\n\nYour application has been rejected because it is not valid." %>
+<% body = [
+  '<div class="bf-form">',
+  partial("partials/blockframe/text", locals: { size: :title, label: "Edit rejection email" }),
+  partial("partials/blockframe/field", locals: {
+    type: :textarea,
+    label: "Rejection email",
+    title: "Rejection email — textarea",
+    value: draft
+  }),
+  '<div class="bf-actions"><span class="bf-action bf-action--secondary" title="Previous"></span><span class="bf-action bf-action--primary" title="Continue"></span></div>',
+  '</div>'
+].join %>
+<%= partial "partials/blockframe/page", locals: { caption: caption, show_tabs: false, body: body } %>

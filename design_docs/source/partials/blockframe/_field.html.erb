@@ -12,10 +12,12 @@
     options  — optional array of option label strings (radio / multi-select)
     selected — index of selected option (default 0); use -1 for none
     callout  — when true, option labels use callout text colour
+    value    — optional textarea contents (draft text)
 %>
 <% type = (defined?(type) && type) ? type.to_s : "text" %>
 <% label = (defined?(label) && label) ? label : nil %>
 <% title = (defined?(title) && title) ? title : ([label, type.tr("_", " ")].compact.join(" — ")) %>
+<% value = (defined?(value) && value) ? value : nil %>
 <% type_title = type.tr("_", " ") %>
 <% options = (defined?(options) && options) ? Array(options) : nil %>
 <% selected = (defined?(selected) && !selected.nil?) ? selected.to_i : 0 %>
@@ -25,7 +27,7 @@
 <% if label %><span class="bf-field__label" title="<%= escape_html(label) %> (label)"><%= label %></span><% end %>
 <% case type
 when "textarea" %>
-  <span class="bf-field__input bf-field__input--textarea" title="<%= escape_html(type_title) %> (input)"></span>
+  <span class="bf-field__input bf-field__input--textarea<%= ' bf-field__input--with-value' if value %>" title="<%= escape_html(type_title) %> (input)"><% if value %><%= escape_html(value).gsub("\n", "<br>") %><% end %></span>
 <% when "number" %>
   <span class="bf-field__input bf-field__input--narrow" title="<%= escape_html(type_title) %> (input)"></span>
 <% when "money", "moneygbp" %>

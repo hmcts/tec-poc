@@ -33,6 +33,7 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
         tecCase.setBatchLinkCase(null);
         tecCase.setBatchLinkType(null);
         tecCase.setStatusDisplay(stateLabel(request.state()));
+        tecCase.setOotRejectionEmail(null);
         tecCase.setTasksMarkdown(
             TecPrototypeTasks.markdownFor(request.caseRef(), request.state(), tecCase)
         );
