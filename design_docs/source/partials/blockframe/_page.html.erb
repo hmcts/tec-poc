@@ -1,7 +1,7 @@
 <%#
   Page shell: ExUI chrome + optional tab strip + body HTML.
   Locals: body, caption, active, wide, frame, show_tabs, minimal, highlight_tab,
-           highlight_nav, highlight_next_step, nav, tabs_variant, success_banner
+           highlight_nav, highlight_next_step, next_step_event, nav, tabs_variant, success_banner
   frame — optional modifier class suffix (e.g. :cases → bf-frame--cases)
   tabs_variant — :batch uses the TEC Batch tab strip
 %>
@@ -14,7 +14,8 @@
 <% highlight_tab = (defined?(highlight_tab) && highlight_tab) ? highlight_tab : nil %>
 <% highlight_nav = (defined?(highlight_nav) && highlight_nav) ? highlight_nav : nil %>
 <% highlight_next_step = (defined?(highlight_next_step) && highlight_next_step) ? highlight_next_step : false %>
+<% next_step_event = (defined?(next_step_event) && next_step_event) ? next_step_event : nil %>
 <% nav = (defined?(nav) && nav) ? nav : nil %>
 <% tabs_variant = (defined?(tabs_variant) && tabs_variant) ? tabs_variant : nil %>
 <% success_banner = (defined?(success_banner) && success_banner) ? success_banner : nil %>
-<div class="bf-frame<%= ' bf-frame--wide' if wide %><%= " bf-frame--#{frame}" if frame %>"><% if caption %><div class="bf-frame__label"><%= caption %></div><% end %><div class="bf-frame__page"<% if caption %> title="<%= escape_html(caption) %>"<% end %>><%= partial "partials/blockframe/chrome", locals: { show_case_header: show_tabs, minimal: minimal, highlight_nav: highlight_nav, highlight_next_step: highlight_next_step, nav: nav, success_banner: success_banner } %><% if show_tabs %><%= partial "partials/blockframe/tabs", locals: { active: active, minimal: minimal, highlight_tab: highlight_tab, variant: tabs_variant } %><% end %><div class="bf-body"><%= body %></div></div></div>
+<div class="bf-frame<%= ' bf-frame--wide' if wide %><%= " bf-frame--#{frame}" if frame %>"><% if caption %><div class="bf-frame__label"><%= caption %></div><% end %><div class="bf-frame__page"<% if caption %> title="<%= escape_html(caption) %>"<% end %>><%= partial "partials/blockframe/chrome", locals: { show_case_header: show_tabs, minimal: minimal, highlight_nav: highlight_nav, highlight_next_step: highlight_next_step, next_step_event: next_step_event, nav: nav, success_banner: success_banner } %><% if show_tabs %><%= partial "partials/blockframe/tabs", locals: { active: active, minimal: minimal, highlight_tab: highlight_tab, variant: tabs_variant } %><% end %><div class="bf-body"><%= body %></div></div></div>

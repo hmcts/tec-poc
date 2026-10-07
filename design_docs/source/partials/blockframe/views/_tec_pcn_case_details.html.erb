@@ -6,6 +6,8 @@
     validation_errors — when true, show out-of-time TE9/TE7 pair with Form invalid callouts
     highlight_tab
     highlight_next_step — yellow outline on the Next step dropdown
+    next_step_event — event name shown in the Next step dropdown
+    show_general_applications — when true, show the General applications section
     nav — passed to chrome (e.g. :local_authority)
     success_banner — success message shown below the ExUI bar
     show_oot_refusal_decision — when true, show Out of time application decision under Registration
@@ -14,6 +16,8 @@
 <% validation_errors = (defined?(validation_errors) && validation_errors) ? validation_errors : false %>
 <% highlight_tab = (defined?(highlight_tab) && highlight_tab) ? highlight_tab : nil %>
 <% highlight_next_step = (defined?(highlight_next_step) && highlight_next_step) ? highlight_next_step : false %>
+<% next_step_event = (defined?(next_step_event) && next_step_event) ? next_step_event : nil %>
+<% show_general_applications = (defined?(show_general_applications) && show_general_applications) ? show_general_applications : false %>
 <% nav = (defined?(nav) && nav) ? nav : nil %>
 <% success_banner = (defined?(success_banner) && success_banner) ? success_banner : nil %>
 <% show_oot_refusal_decision = (defined?(show_oot_refusal_decision) && show_oot_refusal_decision) ? show_oot_refusal_decision : false %>
@@ -62,6 +66,15 @@
   '<div class="bf-kv" title="Permission sought"><span class="bf-kv__key">Permission sought</span><span class="bf-kv__value" style="width: 50%"></span></div>',
   '<div class="bf-kv" title="Reasons"><span class="bf-kv__key">Reasons</span><span class="bf-kv__value" style="width: 76%"></span></div>',
   '<div class="bf-kv" title="Signed and dated"><span class="bf-kv__key">Signed and dated</span><span class="bf-kv__value" style="width: 42%"></span></div>',
-  "</div>"
+  "</div>",
+  (show_general_applications ? [
+    '<div class="bf-section" title="General applications section">',
+    partial("partials/blockframe/text", locals: { size: :title, label: "General applications", callout: true }),
+    '<div class="bf-kv" title="Rank"><span class="bf-kv__key bf-callout">Rank</span><span class="bf-kv__value bf-callout" title="Rank value">1</span></div>',
+    '<div class="bf-kv" title="Applicant"><span class="bf-kv__key">Applicant</span><span class="bf-kv__value bf-callout" title="Applicant value">Respondent</span></div>',
+    '<div class="bf-kv" title="Type"><span class="bf-kv__key">Type</span><span class="bf-kv__value bf-callout" title="Type value">Adjourn</span></div>',
+    '<div class="bf-kv" title="State"><span class="bf-kv__key bf-callout">State</span><span class="bf-kv__value bf-callout" title="Application state">Issued</span></div>',
+    "</div>"
+  ].join : "")
 ].join %>
-<%= partial "partials/blockframe/page", locals: { caption: caption, active: :case_details, body: body, highlight_tab: highlight_tab, highlight_next_step: highlight_next_step, nav: nav, success_banner: success_banner } %>
+<%= partial "partials/blockframe/page", locals: { caption: caption, active: :case_details, body: body, highlight_tab: highlight_tab, highlight_next_step: highlight_next_step, next_step_event: next_step_event, nav: nav, success_banner: success_banner } %>

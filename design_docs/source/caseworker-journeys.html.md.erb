@@ -7,6 +7,36 @@ weight: 50
 
 Journey boards for TEC caseworker review work. Frames reuse [TEC PCN blockframes](/tec-pcn-blockframes.html) and [ExUI form elements](/exui-form-elements.html). Yellow outline (`highlight`) and link-blue (`callout`) mark the control that starts each step. Hover blocks for element names.
 
+## Journey: Enter a general application
+
+The clerk is already on the **Case details** tab of a TEC PCN case, in any case state. They choose **Enter a general application** from the **Next step** dropdown and select **Go**. The illustrated path is an adjournment made without notice, where the parties do not consent, so every page is shown. Hearing date is skipped unless the type is Adjourn. The refer-to-judge page is skipped unless the parties do not consent and the application is without notice. Something else adds a categories text area on Application details.
+
+How the event is stored is described in the tech docs: [Enter a general application](http://localhost:4568/enter-general-application.html).
+
+<div class="bf-journey">
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_details", locals: { caption: "1. TEC PCN — Case details", highlight_tab: :case_details, highlight_next_step: true, next_step_event: "Enter a general application" } %><p class="bf-journey__note">On the <strong>Case details</strong> tab they open <strong>Next step</strong>, choose <strong>Enter a general application</strong>, and select <strong>Go</strong>.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Go</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_enter_general_application", locals: { caption: "2. Application details", page: :details } %><p class="bf-journey__note">They record who applied, a received date in the past, and the type. <strong>Something else</strong> also asks which categories apply.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_enter_general_application", locals: { caption: "3. Hearing date", page: :hearing } %><p class="bf-journey__note">Shown only for <strong>Adjourn</strong>. They say whether a hearing is due in the next 14 days. This page does not change a hearing.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_enter_general_application", locals: { caption: "4. Application fee", page: :fee } %><p class="bf-journey__note">They can continue only when the fee has already been received, and then enter the amount. <strong>No</strong> tells them to request payment first. Help with Fees asks for the reference when the answer is <strong>Yes</strong>.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_enter_general_application", locals: { caption: "5. Consent and notice", page: :consent } %><p class="bf-journey__note">They say whether all parties consent. If not, they say whether the application is without notice.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_enter_general_application", locals: { caption: "6. Upload general application", page: :upload } %><p class="bf-journey__note">They upload the N244. This file is required.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_enter_general_application", locals: { caption: "7. Upload related evidence", page: :evidence } %><p class="bf-journey__note">Related evidence is optional. They can add documents or continue without any.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_enter_general_application", locals: { caption: "8. Refer to judge", page: :refer } %><p class="bf-journey__note">Shown only when the parties do not consent and the application is without notice. The page tells them to refer it to a judge. It does not send the referral.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_enter_general_application", locals: { caption: "9. Check your answers", page: :summary } %><p class="bf-journey__note">They check the answers and select <strong>Submit</strong>. The case state does not change.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Submit</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_enter_general_application", locals: { caption: "10. Application entered", page: :confirmation } %><p class="bf-journey__note">The confirmation is <strong>Application entered</strong>, with the case number and what happens next.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Case details</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_details", locals: { caption: "11. TEC PCN — Case details", highlight_tab: :case_details, show_general_applications: true } %><p class="bf-journey__note">Case details lists the application under <strong>General applications</strong>, including state <strong>Issued</strong>. The N244 is in Case File View <strong>Applications</strong>. Related evidence is in <strong>Uncategorised</strong>.</p></div>
+</div>
+
 ## Journey: Review an out-of-time validation failure
 
 Caseworker picks up a validation-failure task from **My work**, reviews the TE9/TE7 (or PE3/PE2) pair on Case details, compares scanned documents in Case File View, corrects OCR data via **Edit application** if needed, then completes **Validate OOT application**. **Form valid** revalidates against business rules; **Form invalid** continues to **Edit rejection email**, where they can change a draft email to the respondent. After submit they land on **History**.
@@ -60,6 +90,8 @@ Caseworker opens an exception case, uses **Next steps** on an assigned task, com
 </div>
 
 ## Journey: Review a N244 application validation failure
+
+This is a separate, unimplemented review. Entering an N244 is [Enter a general application](#journey-enter-a-general-application), which starts from the Case details **Next step** dropdown.
 
 Caseworker opens a case with an N244 application validation failure, uses **Next steps** on an assigned task, completes the review event, then returns to Case details.
 

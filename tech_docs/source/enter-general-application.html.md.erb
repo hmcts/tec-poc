@@ -1,0 +1,66 @@
+---
+title: Enter a general application
+weight: 26
+---
+
+# Enter a general application
+
+A clerk records a paper N244 against an existing TEC PCN case. The application is a row on that case, not a new CCD case and not a case link. Submitting the event does not change the PCN `CaseState`.
+
+The caseworker journey, starting from the Case details tab, is on the design docs site: [Enter a general application](http://localhost:4567/caseworker-journeys.html#journey-enter-a-general-application).
+
+## Where the event appears
+
+| | |
+| --- | --- |
+| Event id | `enterGeneralApplication` |
+| Display name | Enter a general application |
+| Who can run it | Clerk (`caseworker-tec`), create, read, and update |
+| When | Every `CaseState` |
+| Feature flags | None |
+| Case state after submit | Unchanged. The submit response sets a confirmation body and does not call `.state()` |
+
+The local authority role is not granted the event. The desired-matrix “Make N244 application” action for a local authority is a different, unimplemented event.
+
+The state diagram’s `generalApplicationReceived` arrows are not this event and are not implemented.
+
+## Form
+
+`TecCaseConfiguration.configureEnterGeneralApplication` registers the event. The form is `GeneralApplicationEntry`, unwrapped onto the case with the `genApp` prefix (`@JsonUnwrapped(prefix = "genApp")`). Page show conditions need top-level case field ids, so conditions use ids such as `genAppApplicationType` and `genAppFeeReceived`.
+
+The event uses `.showSummary()`, so ExUI shows check your answers before submit.
+
+| Page | Shown when | Fields |
+| --- | --- | --- |
+| Application details | Always | Who made the application (Local authority or Respondent), date received, type (Adjourn, Set aside, or Something else). Categories is a text area and appears only for Something else. |
+| Hearing date | Type is Adjourn | Whether there is a hearing in the next 14 days. This does not create or change a hearing. |
+| Application fee | Always | Whether HMCTS has received the fee. Amount is required when the answer is Yes. A label is shown when the answer is No. Help with Fees, and the reference when that answer is Yes. |
+| Application consent and notice | Always | Whether all parties consent. Without notice is required when they do not. |
+| Upload general application | Always | The N244 document. Required. |
+| Upload related evidence | Always | Optional collection of documents. |
+| Refer without notice application to judge | Parties do not consent and the application is without notice | Label: “You must refer this application to a judge.” The page does not send a referral. |
+
+Applicant is a fixed list because TEC has no party records to choose from.
+
+### Validation
+
+Continuing from Application details fails when the received date is today or in the future: “Date the application was received must be in the past”.
+
+Continuing from Application fee, and submit, both fail unless the fee has been received: “You must request payment from the applicant before entering this application”. The clerk records a fee that has already been taken. There is no card payment and no service request.
+
+Submit repeats those rules and also requires the conditional fields (categories, hearing question, amount, Help with Fees reference, without notice) and a complete N244 document (url, binary url, and filename).
+
+## What is stored
+
+Flyway `V23__create_tec_case_general_application.sql` creates `public.tec_case_general_application`, one row per application, many per `tec_case`. `TecCaseRepository.insertGeneralApplication` assigns `rank` as one more than the current maximum for that case, and always stores state `GEN_APP_ISSUED` (`GeneralApplicationState`, label “Issued”). Yes/no answers are stored as the enum name.
+
+Documents are separate rows in `tec_case_document`, written by `storeGeneralApplicationDocuments`:
+
+- the N244 uses Case File View category `applications` (Applications)
+- each related evidence file uses `uncategorisedDocuments` (Uncategorised)
+
+Document URLs are rewritten with `CdamDocumentUrls.toCdamUrl` before insert.
+
+The event form is not persisted on the case. `TecCaseView.getCase` clears `generalApplication` and rebuilds the `generalApplications` collection from `findGeneralApplications`, ordered by rank. Case details shows that collection, including state, only when it is not empty. The section label is **General applications**.
+
+The confirmation panel is titled **Application entered** and includes the case number. The “What happens next” text says that a without-notice application informs only the applicant, and any other application informs all parties. Nothing in this event sends that correspondence or creates a work-allocation task.

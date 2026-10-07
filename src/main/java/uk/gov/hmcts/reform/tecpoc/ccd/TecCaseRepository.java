@@ -586,6 +586,69 @@ public class TecCaseRepository {
         return id;
     }
 
+    public UUID insertGeneralApplication(long caseReference, GeneralApplicationEntry entry) {
+        UUID id = UUID.randomUUID();
+        database.update("""
+            insert into tec_case_general_application (
+                id, case_reference, rank, applicant, date_received, application_type,
+                something_else_details, within_14_days, fee_amount_received, applied_for_hwf,
+                hwf_reference, all_parties_agree, without_notice, state
+            ) values (
+                :id, :caseReference,
+                (
+                    select coalesce(max(rank), 0) + 1
+                      from tec_case_general_application
+                     where case_reference = :caseReference
+                ),
+                :applicant, :dateReceived, :applicationType,
+                :somethingElseDetails, :within14Days, :feeAmountReceived, :appliedForHwf,
+                :hwfReference, :allPartiesAgree, :withoutNotice, :state
+            )
+            """, new MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("caseReference", caseReference)
+            .addValue("applicant", entry.getApplicant().name())
+            .addValue("dateReceived", Date.valueOf(entry.getDateReceived()))
+            .addValue("applicationType", entry.getApplicationType().name())
+            .addValue("somethingElseDetails", entry.getSomethingElseDetails())
+            .addValue("within14Days", yesNoName(entry.getWithin14Days()))
+            .addValue("feeAmountReceived", entry.getFeeAmountReceived())
+            .addValue("appliedForHwf", entry.getAppliedForHwf().name())
+            .addValue("hwfReference", entry.getHwfReference())
+            .addValue("allPartiesAgree", entry.getAllPartiesAgree().name())
+            .addValue("withoutNotice", yesNoName(entry.getWithoutNotice()))
+            .addValue("state", GeneralApplicationState.GEN_APP_ISSUED.name()));
+        return id;
+    }
+
+    public List<TecCaseGeneralApplication> findGeneralApplications(long caseReference) {
+        return database.query("""
+            select id, rank, applicant, date_received, application_type, something_else_details,
+                   within_14_days, fee_amount_received, applied_for_hwf, hwf_reference,
+                   all_parties_agree, without_notice, state
+              from tec_case_general_application
+             where case_reference = :caseReference
+             order by rank asc, created_at asc, id asc
+            """, Map.of("caseReference", caseReference), (resultSet, rowNumber) -> {
+                Date dateReceived = resultSet.getDate("date_received");
+                return new TecCaseGeneralApplication(
+                    resultSet.getObject("id", UUID.class),
+                    resultSet.getInt("rank"),
+                    GeneralApplicationApplicant.valueOf(resultSet.getString("applicant")),
+                    dateReceived == null ? null : dateReceived.toLocalDate(),
+                    GeneralApplicationType.valueOf(resultSet.getString("application_type")),
+                    resultSet.getString("something_else_details"),
+                    yesNo(resultSet.getString("within_14_days")),
+                    resultSet.getInt("fee_amount_received"),
+                    YesNo.valueOf(resultSet.getString("applied_for_hwf")),
+                    resultSet.getString("hwf_reference"),
+                    YesNo.valueOf(resultSet.getString("all_parties_agree")),
+                    yesNo(resultSet.getString("without_notice")),
+                    GeneralApplicationState.valueOf(resultSet.getString("state"))
+                );
+            });
+    }
+
     public List<TecCaseWarrantAuthorisation> findWarrantAuthorisations(long caseReference) {
         return database.query("""
             select id, date_of_issue, date_of_expiry, status
@@ -602,6 +665,14 @@ public class TecCaseRepository {
                     WarrantAuthorisationStatus.valueOf(resultSet.getString("status"))
                 );
             });
+    }
+
+    private static String yesNoName(YesNo value) {
+        return value == null ? null : value.name();
+    }
+
+    private static YesNo yesNo(String value) {
+        return value == null ? null : YesNo.valueOf(value);
     }
 
     private MapSqlParameterSource parameters(long caseReference, TecCase tecCase) {

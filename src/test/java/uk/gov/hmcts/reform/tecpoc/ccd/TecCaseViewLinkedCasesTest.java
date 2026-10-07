@@ -33,6 +33,7 @@ class TecCaseViewLinkedCasesTest {
         when(repository.find(111L)).thenReturn(stored);
         when(repository.findDocuments(111L)).thenReturn(List.of());
         when(repository.findWarrantAuthorisations(111L)).thenReturn(List.of());
+        when(repository.findGeneralApplications(111L)).thenReturn(List.of());
 
         TecCase result = view.getCase(new CaseViewRequest<>(111L, CaseState.CASE_ISSUED));
 
@@ -50,6 +51,7 @@ class TecCaseViewLinkedCasesTest {
         when(repository.find(222L)).thenReturn(stored);
         when(repository.findDocuments(222L)).thenReturn(List.of());
         when(repository.findWarrantAuthorisations(222L)).thenReturn(List.of());
+        when(repository.findGeneralApplications(222L)).thenReturn(List.of());
 
         TecCase result = view.getCase(
             new CaseViewRequest<>(222L, CaseState.PENDING_REFUSAL_DECISION)

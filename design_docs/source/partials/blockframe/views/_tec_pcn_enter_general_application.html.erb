@@ -1,0 +1,136 @@
+<%#
+  TEC PCN — Enter a general application (clerk Next step).
+  Locals:
+    caption — frame label
+    page    — :details | :hearing | :fee | :consent | :upload | :evidence | :refer | :summary | :confirmation
+%>
+<% caption = (defined?(caption) && caption) ? caption : "Event — Enter a general application" %>
+<% page = (defined?(page) && page) ? page.to_sym : :details %>
+<% body_parts = ['<div class="bf-form bf-form--full">'] %>
+<% case page
+when :details %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Application details", callout: true }),
+  partial("partials/blockframe/field", locals: {
+    type: :fixed_radio_list,
+    label: "Who made the application?",
+    options: ["Local authority", "Respondent"],
+    selected: 1,
+    callout: true
+  }),
+  partial("partials/blockframe/field", locals: {
+    type: :date,
+    label: "What date was the application received?"
+  }),
+  partial("partials/blockframe/field", locals: {
+    type: :fixed_radio_list,
+    label: "Which type of application has the applicant made?",
+    options: ["Adjourn", "Set aside", "Something else"],
+    selected: 0,
+    callout: true
+  })
+]) %>
+<% when :hearing %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Hearing date", callout: true }),
+  partial("partials/blockframe/field", locals: {
+    type: :fixed_radio_list,
+    label: "Is there a hearing for this case in the next 14 days?",
+    options: ["Yes", "No"],
+    selected: 0,
+    callout: true
+  })
+]) %>
+<% when :fee %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Application fee", callout: true }),
+  partial("partials/blockframe/field", locals: {
+    type: :fixed_radio_list,
+    label: "Has HMCTS received the application fee?",
+    options: ["Yes", "No"],
+    selected: 0,
+    callout: true
+  }),
+  partial("partials/blockframe/field", locals: {
+    type: :money,
+    label: "Enter the amount received"
+  }),
+  partial("partials/blockframe/field", locals: {
+    type: :fixed_radio_list,
+    label: "Has the applicant included a Help With Fees reference number on their application?",
+    options: ["Yes", "No"],
+    selected: 1,
+    callout: true
+  })
+]) %>
+<% when :consent %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Application consent and notice", callout: true }),
+  partial("partials/blockframe/field", locals: {
+    type: :fixed_radio_list,
+    label: "Do all parties consent to this application?",
+    options: ["Yes", "No"],
+    selected: 1,
+    callout: true
+  }),
+  partial("partials/blockframe/field", locals: {
+    type: :fixed_radio_list,
+    label: "Has the applicant asked for this application to be made without notice?",
+    options: ["Yes", "No"],
+    selected: 0,
+    callout: true
+  })
+]) %>
+<% when :upload %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Upload general application", callout: true }),
+  partial("partials/blockframe/field", locals: {
+    type: :document,
+    label: "Upload general application"
+  })
+]) %>
+<% when :evidence %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Upload related evidence", callout: true }),
+  partial("partials/blockframe/field", locals: {
+    type: :collection,
+    label: "Upload related evidence"
+  })
+]) %>
+<% when :refer %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Refer without notice application to judge", callout: true }),
+  partial("partials/blockframe/text", locals: {
+    size: :medium,
+    label: "You must refer this application to a judge.",
+    callout: true
+  })
+]) %>
+<% when :summary %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Check your answers", callout: true }),
+  '<div class="bf-kv" title="Applicant"><span class="bf-kv__key">Who made the application?</span><span class="bf-kv__value bf-callout">Respondent</span></div>',
+  '<div class="bf-kv" title="Type"><span class="bf-kv__key">Which type of application has the applicant made?</span><span class="bf-kv__value bf-callout">Adjourn</span></div>',
+  '<div class="bf-kv" title="Fee received"><span class="bf-kv__key">Has HMCTS received the application fee?</span><span class="bf-kv__value bf-callout">Yes</span></div>',
+  '<div class="bf-kv" title="Without notice"><span class="bf-kv__key">Has the applicant asked for this application to be made without notice?</span><span class="bf-kv__value bf-callout">Yes</span></div>'
+]) %>
+<% when :confirmation %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Application entered", callout: true }),
+  partial("partials/blockframe/text", locals: { size: :medium, label: "Case number: 1788-2660-5799-1856" }),
+  partial("partials/blockframe/text", locals: { size: :title, label: "What happens next" }),
+  partial("partials/blockframe/text", locals: {
+    size: :medium,
+    label: "If the application was made without notice, only the applicant will be informed. Otherwise, all parties will be informed."
+  })
+]) %>
+<% end %>
+<% continue_label = (page == :summary) ? "Submit" : "Continue" %>
+<% unless page == :confirmation %>
+<% body_parts.concat([
+  %(<div class="bf-actions"><span class="bf-action bf-action--secondary" title="Previous"></span><span class="bf-action bf-action--primary" title="#{continue_label}"></span></div>)
+]) %>
+<% end %>
+<% body_parts << "</div>" %>
+<% body = body_parts.join %>
+<%= partial "partials/blockframe/page", locals: { caption: caption, show_tabs: false, body: body } %>

@@ -2,6 +2,7 @@ package uk.gov.hmcts.reform.tecpoc.ccd;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import java.time.LocalDate;
@@ -340,6 +341,25 @@ public class TecCase {
      */
     @CCD(label = "Warrant authorisation", searchable = false)
     private WarrantAuthorisation warrantAuthorisation;
+
+    /**
+     * Event-only form for {@code enterGeneralApplication}. Unwrapped so the answers
+     * are case fields ({@code genApp...}) for page show conditions. Cleared by {@link TecCaseView}.
+     */
+    @JsonUnwrapped(prefix = "genApp")
+    @CCD(label = "General application", searchable = false)
+    private GeneralApplicationEntry generalApplication;
+
+    /**
+     * General applications shown on Case details. Populated by {@link TecCaseView}.
+     */
+    @CCD(
+        label = "General applications",
+        typeOverride = FieldType.Collection,
+        typeParameterOverride = "GeneralApplication"
+    )
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<ListValue<GeneralApplication>> generalApplications;
 
     /**
      * Warrant authorisations shown on Case details. Populated by {@link TecCaseView}.

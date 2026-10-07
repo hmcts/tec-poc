@@ -42,6 +42,7 @@ The relevant application classes are:
 - `TecCaseRepository`: persistence of TEC-owned business data in `public.tec_case`.
 - `TecCaseView`: reconstruction of a CCD-facing `TecCase` from the business table.
 - `TecCaseWarrantAuthorisation` / `WarrantAuthorisation`: warrant authorisation rows and CCD complex type.
+- `TecCaseGeneralApplication` / `GeneralApplication` / `GeneralApplicationEntry`: general application rows, the Case details collection, and the clerk entry form.
 - `TecCaseController` and `TecCaseCreationService`: the caller-facing create API and its CCD Data Store client.
 - `BatchCase` / `BatchCaseState` / `BatchCaseConfiguration` / `BatchCaseView` / `BatchCaseRepository`:
   second case type `TEC_BATCH` for batches (list/details via ExUI Case list).
@@ -90,7 +91,8 @@ ExUI Case list / Find case expose a **case type** filter. Fresh sessions prefera
 (import order + alphabetical id); ExUI may remember the last selection in `localStorage` — see
 [exui-navigation](/exui-navigation.html).
 
-Most system events use `[STATE]="NEVER_SHOW"`. Clerk-visible PCN events include `verifyFormValidation`,
+Most system events use `[STATE]="NEVER_SHOW"`. Clerk-visible PCN events include `enterGeneralApplication`
+(every state), `verifyFormValidation`,
 `reviewOotRefusalDecision` (only in `PENDING_REFUSAL_DECISION`),
 and the form-specific edit events (`editTe9Application`, `editPe3Application`, `editTe7Application`,
 `editPe2Application`) — these are **not** granted to LOCAL_AUTHORITY. Upload batch file is the
@@ -123,6 +125,7 @@ The event handlers update TEC-owned data as follows:
 | `editPe2Application` | Optional PE2 fields (clerk; no PCN) | Updates PE2 columns except form and PCN | unchanged |
 | `applyWarrantAuthorisation` | `warrantAuthorisation` (date of issue, date of expiry, status) | Inserts `public.tec_case_warrant_authorisation` | `active` → `WARRANT_AUTHORISATION_ISSUED`; `expired` → `WARRANT_AUTHORISATION_EXPIRED`; `cancelled` → unchanged |
 | `setCaseState` | `targetCaseState` | None (prototype helper) | the requested `CaseState` |
+| `enterGeneralApplication` | General application form (applicant, type, fee, consent, uploaded N244) | Inserts `public.tec_case_general_application` with state `GEN_APP_ISSUED`; N244 goes to `tec_case_document` category `applications`, related evidence to `uncategorisedDocuments` | unchanged |
 
 `attachCaseFileDocument` is system-only and hidden from ExUI (`NEVER_SHOW`). Local uploads use
 `bin/attach-case-file-document.sh`, which posts the file to Case Document AM (`:4455`) then submits
@@ -179,6 +182,13 @@ when an active warrant authorisation is already on the case; otherwise the case 
 `PENDING_REFUSAL_DECISION` because the state model’s no-warrant destination (`ELIGIBLE_FOR_WARRANT`)
 is not a `CaseState`.
 
+`enterGeneralApplication` is a clerk Next step in every PCN state. There is no feature flag.
+Submit stores the application as `GEN_APP_ISSUED` and does not change PCN state. The form, validation,
+`tec_case_general_application` table, and how Case details and Case File View are rebuilt are described
+in [Enter a general application](/enter-general-application.html). The caseworker journey starts from
+the Case details **Next step** dropdown:
+[Enter a general application](http://localhost:4567/caseworker-journeys.html#journey-enter-a-general-application).
+
 `applyWarrantAuthorisation` is system-only and hidden from ExUI. It appends one warrant
 authorisation (date of issue, date of expiry, status) to `public.tec_case_warrant_authorisation`
 and sets PCN state to `WARRANT_AUTHORISATION_ISSUED` (`active`) or `WARRANT_AUTHORISATION_EXPIRED`
@@ -202,11 +212,11 @@ SDK does not prepend it):
 - **Roles and access**: CCD shell tab so the label always appears in Manage Case. This is not ExUI's
   Work Allocation / case access management UI (that is prepended only when WA is enabled for the
   jurisdiction).
-- **Parties**: shared Case Flags component, immediately after Roles and access. `flagLauncher` uses
-  `#ARGUMENT(READ)`, and the `parties` collection (field id must stay `parties`) uses
-  `#ARGUMENT(Flags)` when `flagLauncher` is present. `TecCaseView` supplies an empty launcher, empty
-  case-level `caseFlags`, and an empty `parties` list. No flag data is loaded, and there are no
-  create or manage flag events yet, so Request support and Manage support are not available.
+- **Parties**: shared Case Flags component, immediately after Roles and access, hidden for every
+  role (`TabShowCondition` `[STATE]="NEVER_SHOW"`). `flagLauncher` uses `#ARGUMENT(READ)`, and the
+  `parties` collection (field id must stay `parties`) uses `#ARGUMENT(Flags)` when `flagLauncher`
+  is present. `TecCaseView` supplies an empty launcher, empty case-level `caseFlags`, and an empty
+  `parties` list. No flag data is loaded, and there are no create or manage flag events yet.
 - **Case details**: view-only **State** at the top (from CCD state via `TecCaseView`), then a
   **Registration** section containing identifiers (including a **Batch case**
   `CaseLink` to the related registration `TEC_BATCH` case when `batch_case_reference` is set), local authority, respondent lines, vehicle/offence details,

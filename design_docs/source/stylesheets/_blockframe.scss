@@ -316,6 +316,17 @@ $bf-exui-light: #ffffff;
   outline-offset: 1px;
 }
 
+.bf-exui__next-step-select--labelled {
+  height: auto;
+  width: auto;
+  max-width: 148px;
+  padding: 1px 10px 1px 3px;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: $bf-text-dark;
+}
+
 .bf-exui__go {
   display: block;
   height: 12px;

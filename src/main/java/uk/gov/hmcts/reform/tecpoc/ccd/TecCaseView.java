@@ -63,8 +63,12 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
         // Batch links are owned by the batch case (PCN appears under ExUI "linked from"
         // via CCD case_link / getLinkedCases). PCN caseLinks stay empty.
         tecCase.setCaseLinks(List.of());
+        tecCase.setGeneralApplication(null);
         tecCase.setWarrantAuthorisations(
             toWarrantAuthorisations(repository.findWarrantAuthorisations(request.caseRef()))
+        );
+        tecCase.setGeneralApplications(
+            toGeneralApplications(repository.findGeneralApplications(request.caseRef()))
         );
         tecCase.setAllDocuments(toAllDocuments(repository.findDocuments(request.caseRef())));
         return tecCase;
@@ -92,12 +96,42 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
             .toList();
     }
 
+    static List<ListValue<GeneralApplication>> toGeneralApplications(
+        List<TecCaseGeneralApplication> applications
+    ) {
+        return applications.stream()
+            .map(TecCaseView::toGeneralApplicationListValue)
+            .toList();
+    }
+
     static List<ListValue<WarrantAuthorisation>> toWarrantAuthorisations(
         List<TecCaseWarrantAuthorisation> authorisations
     ) {
         return authorisations.stream()
             .map(TecCaseView::toWarrantAuthorisationListValue)
             .toList();
+    }
+
+    private static ListValue<GeneralApplication> toGeneralApplicationListValue(
+        TecCaseGeneralApplication application
+    ) {
+        GeneralApplication value = new GeneralApplication();
+        value.setRank(application.rank());
+        value.setApplicant(application.applicant());
+        value.setDateReceived(application.dateReceived());
+        value.setApplicationType(application.applicationType());
+        value.setSomethingElseDetails(application.somethingElseDetails());
+        value.setWithin14Days(application.within14Days());
+        value.setFeeAmountReceived(application.feeAmountReceived());
+        value.setAppliedForHwf(application.appliedForHwf());
+        value.setHwfReference(application.hwfReference());
+        value.setAllPartiesAgree(application.allPartiesAgree());
+        value.setWithoutNotice(application.withoutNotice());
+        value.setState(application.state());
+        return ListValue.<GeneralApplication>builder()
+            .id(application.id().toString())
+            .value(value)
+            .build();
     }
 
     private static ListValue<WarrantAuthorisation> toWarrantAuthorisationListValue(

@@ -1,7 +1,11 @@
 package uk.gov.hmcts.reform.tecpoc.ccd;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +20,8 @@ import uk.gov.hmcts.ccd.sdk.api.CaseDetails;
 import uk.gov.hmcts.ccd.sdk.api.EventPayload;
 import uk.gov.hmcts.ccd.sdk.api.callback.AboutToStartOrSubmitResponse;
 import uk.gov.hmcts.ccd.sdk.api.callback.SubmitResponse;
+import uk.gov.hmcts.ccd.sdk.type.Document;
+import uk.gov.hmcts.ccd.sdk.type.ListValue;
 
 class TecCaseConfigurationTest {
 
@@ -277,6 +283,121 @@ class TecCaseConfigurationTest {
         org.junit.jupiter.api.Assertions.assertThrows(
             IllegalArgumentException.class,
             () -> setCaseState(16L, data)
+        );
+    }
+
+    @Test
+    void enterGeneralApplicationPersistsIssuedApplicationAndLeavesStateUnchanged() {
+        GeneralApplicationEntry entry = adjournmentEntry(LocalDate.now().minusDays(1));
+        TecCase data = new TecCase();
+        data.setGeneralApplication(entry);
+
+        SubmitResponse<CaseState> response = enterGeneralApplication(20L, data);
+
+        verify(repository).insertGeneralApplication(20L, entry);
+        verify(repository).insertDocument(
+            eq(20L),
+            eq(CaseFileCategory.APPLICATIONS.getId()),
+            eq(entry.getDocument().getUrl()),
+            eq(entry.getDocument().getBinaryUrl()),
+            eq("n244.pdf")
+        );
+        verify(repository).insertDocument(
+            eq(20L),
+            eq(CaseFileCategory.UNCATEGORISED.getId()),
+            eq(entry.getRelatedEvidence().get(0).getValue().getUrl()),
+            eq(entry.getRelatedEvidence().get(0).getValue().getBinaryUrl()),
+            eq("evidence.pdf")
+        );
+        assertThat(response.getState()).isNull();
+        assertThat(response.getConfirmationBody()).contains("Application entered").contains("20");
+    }
+
+    @Test
+    void enterGeneralApplicationRejectsUnpaidFee() {
+        GeneralApplicationEntry entry = adjournmentEntry(LocalDate.now().minusDays(1));
+        entry.setFeeReceived(YesNo.NO);
+        TecCase data = new TecCase();
+        data.setGeneralApplication(entry);
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> enterGeneralApplication(21L, data)
+        );
+
+        verify(repository, never()).insertGeneralApplication(anyLong(), any());
+    }
+
+    @Test
+    void validateGeneralApplicationDetailsRejectsADateThatIsNotInThePast() {
+        GeneralApplicationEntry entry = adjournmentEntry(LocalDate.now());
+        TecCase data = new TecCase();
+        data.setGeneralApplication(entry);
+
+        AboutToStartOrSubmitResponse<TecCase, CaseState> response = validateGeneralApplicationDetails(data);
+
+        assertThat(response.getErrorMessageOverride())
+            .isEqualTo("Date the application was received must be in the past");
+    }
+
+    @Test
+    void validateGeneralApplicationFeeRejectsUnpaidFee() {
+        GeneralApplicationEntry entry = adjournmentEntry(LocalDate.now().minusDays(1));
+        entry.setFeeReceived(YesNo.NO);
+        TecCase data = new TecCase();
+        data.setGeneralApplication(entry);
+
+        AboutToStartOrSubmitResponse<TecCase, CaseState> response = validateGeneralApplicationFee(data);
+
+        assertThat(response.getErrorMessageOverride())
+            .isEqualTo("You must request payment from the applicant before entering this application");
+    }
+
+    private static GeneralApplicationEntry adjournmentEntry(LocalDate dateReceived) {
+        GeneralApplicationEntry entry = new GeneralApplicationEntry();
+        entry.setApplicant(GeneralApplicationApplicant.RESPONDENT);
+        entry.setDateReceived(dateReceived);
+        entry.setApplicationType(GeneralApplicationType.ADJOURN);
+        entry.setWithin14Days(YesNo.YES);
+        entry.setFeeReceived(YesNo.YES);
+        entry.setFeeAmountReceived(30300);
+        entry.setAppliedForHwf(YesNo.NO);
+        entry.setAllPartiesAgree(YesNo.YES);
+        entry.setDocument(document("n244.pdf"));
+        entry.setRelatedEvidence(List.of(
+            ListValue.<Document>builder().value(document("evidence.pdf")).build()
+        ));
+        return entry;
+    }
+
+    private static Document document(String filename) {
+        return Document.builder()
+            .url("http://localhost:4455/cases/documents/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+            .binaryUrl("http://localhost:4455/cases/documents/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/binary")
+            .filename(filename)
+            .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private SubmitResponse<CaseState> enterGeneralApplication(long caseReference, TecCase data) {
+        return (SubmitResponse<CaseState>) ReflectionTestUtils.invokeMethod(
+            configuration,
+            "enterGeneralApplication",
+            new EventPayload<>(caseReference, data, null)
+        );
+    }
+
+    private AboutToStartOrSubmitResponse<TecCase, CaseState> validateGeneralApplicationDetails(TecCase data) {
+        return configuration.validateGeneralApplicationDetails(
+            CaseDetails.<TecCase, CaseState>builder().data(data).build(),
+            null
+        );
+    }
+
+    private AboutToStartOrSubmitResponse<TecCase, CaseState> validateGeneralApplicationFee(TecCase data) {
+        return configuration.validateGeneralApplicationFee(
+            CaseDetails.<TecCase, CaseState>builder().data(data).build(),
+            null
         );
     }
 

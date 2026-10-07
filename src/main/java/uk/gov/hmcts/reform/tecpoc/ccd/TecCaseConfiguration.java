@@ -12,6 +12,7 @@ import uk.gov.hmcts.ccd.sdk.api.callback.AboutToStartOrSubmitResponse;
 import uk.gov.hmcts.ccd.sdk.api.callback.SubmitResponse;
 import uk.gov.hmcts.ccd.sdk.type.CaseLink;
 import uk.gov.hmcts.ccd.sdk.type.Document;
+import uk.gov.hmcts.ccd.sdk.type.ListValue;
 
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -27,6 +28,13 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
     private static final String REVIEW_OOT_REFUSAL_BODY =
         "The LA has decided to refuse this application. Should their decision be upheld or "
             + "overturned? Overturning their refusal decision will immediately revoke the case.";
+    private static final String GEN_APP_FEE_NOT_RECEIVED =
+        "<p class=\"govuk-body govuk-!-font-weight-bold\">You must request payment from the applicant "
+            + "before entering this application</p>";
+    private static final String DATE_MUST_BE_IN_THE_PAST =
+        "Date the application was received must be in the past";
+    private static final String FEE_MUST_BE_RECEIVED =
+        "You must request payment from the applicant before entering this application";
 
     /**
      * GOV.UK Notify personalisation for the respondent's name. Notify substitutes
@@ -106,8 +114,9 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .label("rolesAndAccessLabel", null, "${rolesAndAccessMarkdown}")
             .field("rolesAndAccessMarkdown", NEVER_SHOW);
 
-        // Standard Case Flags component. No create/manage flag events yet.
+        // Standard Case Flags component. Hidden for every role until flag events exist.
         builder.tab("parties", "Parties")
+            .showCondition(NEVER_SHOW)
             .field(TecCase::getFlagLauncher, null, "#ARGUMENT(READ)")
             .field(TecCase::getCaseFlags, "flagLauncher!=\"\"")
             .field(TecCase::getParties, "flagLauncher!=\"\"", "#ARGUMENT(Flags)");
@@ -256,7 +265,13 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
                 "warrantAuthorisations!=\"\"",
                 "## Warrant authorisations"
             )
-            .field(TecCase::getWarrantAuthorisations, "warrantAuthorisations!=\"\"");
+            .field(TecCase::getWarrantAuthorisations, "warrantAuthorisations!=\"\"")
+            .label(
+                "generalApplicationsSection",
+                "generalApplications!=\"\"",
+                "## General applications"
+            )
+            .field(TecCase::getGeneralApplications, "generalApplications!=\"\"");
 
         builder.tab("caseFileView", "Case File View")
             .field(TecCase::getCaseFileView, null, "#ARGUMENT(CaseFileView)")
@@ -560,6 +575,79 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .grant(Permission.CRUD, UserRole.SYSTEM)
             .fields()
             .mandatory(TecCase::getTargetCaseState);
+
+        configureEnterGeneralApplication(builder);
+    }
+
+    private void configureEnterGeneralApplication(
+        DecentralisedConfigBuilder<TecCase, CaseState, UserRole> builder
+    ) {
+        builder.decentralisedEvent("enterGeneralApplication", this::enterGeneralApplication)
+            .forStates(CaseState.values())
+            .name("Enter a general application")
+            .showSummary()
+            .grant(Permission.CRU, UserRole.CLERK)
+            .fields()
+            .page("applicationDetails", this::validateGeneralApplicationDetails)
+            .pageLabel("Application details")
+            .complex(TecCase::getGeneralApplication)
+            .mandatory(GeneralApplicationEntry::getApplicant)
+            .mandatory(GeneralApplicationEntry::getDateReceived)
+            .mandatory(GeneralApplicationEntry::getApplicationType)
+            .mandatory(
+                GeneralApplicationEntry::getSomethingElseDetails,
+                "genAppApplicationType=\"SOMETHING_ELSE\""
+            )
+            .done()
+            .page("hearingDate")
+            .pageLabel("Hearing date")
+            .showCondition("genAppApplicationType=\"ADJOURN\"")
+            .complex(TecCase::getGeneralApplication)
+            .mandatory(GeneralApplicationEntry::getWithin14Days)
+            .done()
+            .page("applicationFee", this::validateGeneralApplicationFee)
+            .pageLabel("Application fee")
+            .complex(TecCase::getGeneralApplication)
+            .mandatory(GeneralApplicationEntry::getFeeReceived)
+            .mandatory(
+                GeneralApplicationEntry::getFeeAmountReceived,
+                "genAppFeeReceived=\"Yes\""
+            )
+            .label("feeNotReceived", GEN_APP_FEE_NOT_RECEIVED, "genAppFeeReceived=\"No\"")
+            .mandatory(GeneralApplicationEntry::getAppliedForHwf)
+            .mandatory(
+                GeneralApplicationEntry::getHwfReference,
+                "genAppAppliedForHwf=\"Yes\""
+            )
+            .done()
+            .page("consentAndNotice")
+            .pageLabel("Application consent and notice")
+            .complex(TecCase::getGeneralApplication)
+            .mandatory(GeneralApplicationEntry::getAllPartiesAgree)
+            .mandatory(
+                GeneralApplicationEntry::getWithoutNotice,
+                "genAppAllPartiesAgree=\"No\""
+            )
+            .done()
+            .page("uploadGeneralApplication")
+            .pageLabel("Upload general application")
+            .complex(TecCase::getGeneralApplication)
+            .mandatory(GeneralApplicationEntry::getDocument)
+            .done()
+            .page("uploadRelatedEvidence")
+            .pageLabel("Upload related evidence")
+            .complex(TecCase::getGeneralApplication)
+            .optional(GeneralApplicationEntry::getRelatedEvidence)
+            .done()
+            .page("referApplicationToJudge")
+            .pageLabel("Refer without notice application to judge")
+            .showCondition(
+                "genAppAllPartiesAgree=\"No\" AND genAppWithoutNotice=\"Yes\""
+            )
+            .label(
+                "referApplicationToJudgeMessage",
+                "<p class=\"govuk-body\">You must refer this application to a judge.</p>"
+            );
     }
 
     private SubmitResponse<CaseState> createTecCase(EventPayload<TecCase, CaseState> event) {
@@ -808,6 +896,153 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             );
         }
         return Long.parseLong(digits);
+    }
+
+    private SubmitResponse<CaseState> enterGeneralApplication(EventPayload<TecCase, CaseState> event) {
+        GeneralApplicationEntry entry = event.caseData().getGeneralApplication();
+        validateGeneralApplicationForSubmit(entry);
+        repository.insertGeneralApplication(event.caseReference(), entry);
+        storeGeneralApplicationDocuments(event.caseReference(), entry);
+        return SubmitResponse.<CaseState>builder()
+            .confirmationBody(generalApplicationConfirmation(event.caseReference()))
+            .build();
+    }
+
+    AboutToStartOrSubmitResponse<TecCase, CaseState> validateGeneralApplicationDetails(
+        CaseDetails<TecCase, CaseState> details,
+        CaseDetails<TecCase, CaseState> detailsBefore
+    ) {
+        GeneralApplicationEntry entry = details.getData() == null
+            ? null
+            : details.getData().getGeneralApplication();
+        if (entry != null
+            && entry.getDateReceived() != null
+            && !entry.getDateReceived().isBefore(LocalDate.now())) {
+            return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
+                .errorMessageOverride(DATE_MUST_BE_IN_THE_PAST)
+                .build();
+        }
+        return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
+            .data(details.getData())
+            .build();
+    }
+
+    AboutToStartOrSubmitResponse<TecCase, CaseState> validateGeneralApplicationFee(
+        CaseDetails<TecCase, CaseState> details,
+        CaseDetails<TecCase, CaseState> detailsBefore
+    ) {
+        GeneralApplicationEntry entry = details.getData() == null
+            ? null
+            : details.getData().getGeneralApplication();
+        if (entry == null || entry.getFeeReceived() != YesNo.YES) {
+            return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
+                .errorMessageOverride(FEE_MUST_BE_RECEIVED)
+                .build();
+        }
+        return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
+            .data(details.getData())
+            .build();
+    }
+
+    private static void validateGeneralApplicationForSubmit(GeneralApplicationEntry entry) {
+        if (entry == null) {
+            throw new IllegalArgumentException("generalApplication is required");
+        }
+        if (entry.getApplicant() == null) {
+            throw new IllegalArgumentException("generalApplication.applicant is required");
+        }
+        if (entry.getDateReceived() == null) {
+            throw new IllegalArgumentException("generalApplication.dateReceived is required");
+        }
+        if (!entry.getDateReceived().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException(DATE_MUST_BE_IN_THE_PAST);
+        }
+        if (entry.getApplicationType() == null) {
+            throw new IllegalArgumentException("generalApplication.applicationType is required");
+        }
+        if (entry.getApplicationType() == GeneralApplicationType.SOMETHING_ELSE
+            && isBlank(entry.getSomethingElseDetails())) {
+            throw new IllegalArgumentException("generalApplication.somethingElseDetails is required");
+        }
+        if (entry.getApplicationType() == GeneralApplicationType.ADJOURN && entry.getWithin14Days() == null) {
+            throw new IllegalArgumentException("generalApplication.within14Days is required");
+        }
+        if (entry.getFeeReceived() != YesNo.YES) {
+            throw new IllegalArgumentException(FEE_MUST_BE_RECEIVED);
+        }
+        if (entry.getFeeAmountReceived() == null) {
+            throw new IllegalArgumentException("generalApplication.feeAmountReceived is required");
+        }
+        if (entry.getAppliedForHwf() == null) {
+            throw new IllegalArgumentException("generalApplication.appliedForHwf is required");
+        }
+        if (entry.getAppliedForHwf() == YesNo.YES && isBlank(entry.getHwfReference())) {
+            throw new IllegalArgumentException("generalApplication.hwfReference is required");
+        }
+        if (entry.getAllPartiesAgree() == null) {
+            throw new IllegalArgumentException("generalApplication.allPartiesAgree is required");
+        }
+        if (entry.getAllPartiesAgree() == YesNo.NO && entry.getWithoutNotice() == null) {
+            throw new IllegalArgumentException("generalApplication.withoutNotice is required");
+        }
+        requireDocument(entry.getDocument(), "generalApplication.document");
+    }
+
+    private void storeGeneralApplicationDocuments(long caseReference, GeneralApplicationEntry entry) {
+        insertCaseFileDocument(
+            caseReference,
+            entry.getDocument(),
+            CaseFileCategory.APPLICATIONS.getId()
+        );
+        if (entry.getRelatedEvidence() == null) {
+            return;
+        }
+        for (ListValue<Document> item : entry.getRelatedEvidence()) {
+            if (item == null || item.getValue() == null) {
+                continue;
+            }
+            insertCaseFileDocument(
+                caseReference,
+                item.getValue(),
+                CaseFileCategory.UNCATEGORISED.getId()
+            );
+        }
+    }
+
+    private void insertCaseFileDocument(long caseReference, Document document, String categoryId) {
+        requireDocument(document, "document");
+        repository.insertDocument(
+            caseReference,
+            categoryId,
+            CdamDocumentUrls.toCdamUrl(document.getUrl()),
+            CdamDocumentUrls.toCdamUrl(document.getBinaryUrl()),
+            document.getFilename()
+        );
+    }
+
+    private static void requireDocument(Document document, String fieldName) {
+        if (document == null
+            || isBlank(document.getUrl())
+            || isBlank(document.getBinaryUrl())
+            || isBlank(document.getFilename())) {
+            throw new IllegalArgumentException(
+                fieldName + " requires document_url, document_binary_url and document_filename"
+            );
+        }
+    }
+
+    private static String generalApplicationConfirmation(long caseReference) {
+        return """
+            ---
+            <div class="govuk-panel govuk-panel--confirmation govuk-!-padding-top-3 govuk-!-padding-bottom-3">
+            <span class="govuk-panel__title govuk-!-font-size-36">Application entered</span><br>
+            <span class="govuk-panel__body">Case number: %s</span>
+            </div>
+
+            <h3 class="govuk-heading-s">What happens next</h3>
+            <p class="govuk-body govuk-!-margin-bottom-6">If the application was made without notice, only the applicant
+            will be informed. Otherwise, all parties will be informed.</p>
+            """.formatted(caseReference);
     }
 
     private SubmitResponse<CaseState> response(CaseState state) {
