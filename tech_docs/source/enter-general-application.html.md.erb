@@ -64,3 +64,30 @@ Document URLs are rewritten with `CdamDocumentUrls.toCdamUrl` before insert.
 The event form is not persisted on the case. `TecCaseView.getCase` clears `generalApplication` and rebuilds the `generalApplications` collection from `findGeneralApplications`, ordered by rank. Case details shows that collection, including state, only when it is not empty. The section label is **General applications**.
 
 The confirmation panel is titled **Application entered** and includes the case number. The “What happens next” text says that a without-notice application informs only the applicant, and any other application informs all parties. Nothing in this event sends that correspondence or creates a work-allocation task.
+
+## Local script
+
+`bin/enter-general-application.sh` submits this event for an existing PCN. It signs in as the clerk (`tec-demo@test.com`; override with `IDAM_USERNAME`) because the event is not granted to the system user. It uploads `bin/templates/N244_0622.pdf` (override with `N244_FILE`) and puts that document on the event payload, so one submit writes the `tec_case_general_application` row and the Case File View **Applications** document. It does not upload related evidence.
+
+```bash
+./bin/enter-general-application.sh <case-reference> "local authority"
+./bin/enter-general-application.sh <case-reference> respondent
+```
+
+The applicant argument is `local authority` or `respondent` (`la` and `LOCAL_AUTHORITY` are accepted). Hyphens in the case reference are ignored. PCN state is unchanged.
+
+Defaults when the matching environment variable is unset:
+
+| Answer | Default |
+| --- | --- |
+| Date received | Yesterday |
+| Type | Something else |
+| Categories | OOT refusal appeal |
+| Fee received | Yes |
+| Amount | 12600 pence (£126.00) |
+| Help with Fees | No |
+| All parties consent | Yes |
+
+`DATE_RECEIVED` must be in the past. `APPLICATION_TYPE` may be `adjourn`, `set aside`, or `something else`. `WITHIN_14_DAYS` is sent only for adjourn (default `yes`). `WITHOUT_NOTICE` is sent only when `ALL_PARTIES_AGREE=no` (default `no`). `HWF_REFERENCE` is required when `APPLIED_FOR_HWF=yes`. The script always sends fee received as Yes; the event rejects an unpaid fee.
+
+The demo catalogue’s five out-of-time appeal PCNs call this script through `attach_n244`, as the respondent, with these defaults. See [Local demo catalogue seed](/demo-catalogue-seed.html).

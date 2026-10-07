@@ -164,9 +164,16 @@ gen_time_extension() {
     "${case_reference}" "${form}" >/dev/null
 }
 
-# N244 application notice — only for OOT-appeal catalogue states.
+# N244 on the five OOT-appeal demos. Same path as enter-general-application.sh:
+# Issued general application plus N244_0622.pdf under Applications. Defaults
+# (something else, categories "OOT refusal appeal", fee £126) come from that
+# script. Applicant defaults to the respondent.
 attach_n244() {
-  attach_pcn_doc "$1" Applications "${TEMPLATES_DIR}/N244_0622.pdf"
+  local case_reference="$1"
+  local applicant="${2:-respondent}"
+  echo "  entering N244 general application on ${case_reference} as ${applicant}..." >&2
+  "${SCRIPT_DIR}/enter-general-application.sh" \
+    "${case_reference}" "${applicant}" >/dev/null
 }
 
 link_pcn_to_batch() {
@@ -473,7 +480,7 @@ seed_catalogue() {
     "TEC" \
     "${state}" \
     "${ref}" \
-    "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf."
+    "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf. Case details shows General applications: Issued, respondent, something else, OOT refusal appeal."
 
   echo "Seeding pcn-oot-appeal-payment-confirmed..." >&2
   ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
@@ -493,7 +500,7 @@ seed_catalogue() {
     "TEC" \
     "${state}" \
     "${ref}" \
-    "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf."
+    "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf. Case details shows General applications: Issued, respondent, something else, OOT refusal appeal."
 
   echo "Seeding pcn-pending-oot-appeal-decision..." >&2
   ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
@@ -513,7 +520,7 @@ seed_catalogue() {
     "TEC" \
     "${state}" \
     "${ref}" \
-    "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf."
+    "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf. Case details shows General applications: Issued, respondent, something else, OOT refusal appeal."
 
   echo "Seeding pcn-oot-appeal-refused..." >&2
   ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
@@ -533,7 +540,7 @@ seed_catalogue() {
     "TEC" \
     "${state}" \
     "${ref}" \
-    "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf."
+    "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf. Case details shows General applications: Issued, respondent, something else, OOT refusal appeal."
 
   echo "Seeding pcn-case-revoked-oot-appeal-accepted..." >&2
   ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
@@ -553,7 +560,7 @@ seed_catalogue() {
     "TEC" \
     "${state}" \
     "${ref}" \
-    "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf."
+    "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf. Case details shows General applications: Issued, respondent, something else, OOT refusal appeal."
 
   echo "Seeding pcn-warrant-issued..." >&2
   ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"

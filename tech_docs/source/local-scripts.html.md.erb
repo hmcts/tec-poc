@@ -104,7 +104,10 @@ A PCN may be linked to a registration batch and later to other batch types (e.g.
 | `bin/attach-case-file-document.sh` | `<case-ref> <folder> <file-path>` | Upload via Case Document AM and attach to Case File View. PCN folders by default. For batches: `CASE_TYPE_ID=TEC_BATCH EVENT_ID=attachBatchDocument` and folder `inputs` / `outputs` (payload field `batchFileDocument`) |
 | `bin/generate-application.sh` | `<case-ref> <in\|out of time> <TE9\|PE3>` | `recordApplication`, fill PDF, attach under Applications |
 | `bin/generate-time-extension.sh` | `<case-ref> <TE7\|PE2>` | `recordTimeExtension`, fill PDF, attach under Applications |
+| `bin/enter-general-application.sh` | `<case-ref> <local authority\|respondent>` | `enterGeneralApplication` — uploads `N244_0622.pdf` and records an Issued general application. The event files the N244 under Applications and leaves PCN state unchanged. Clerk user (`tec-demo@test.com`) |
 | `bin/apply-warrant-authorisation.sh` | `<case-ref>` | `applyWarrantAuthorisation` — appends a warrant authorisation (issue/expiry/status) to the PCN; `STATUS=active` → `WARRANT_AUTHORISATION_ISSUED`, `expired` → `WARRANT_AUTHORISATION_EXPIRED`, `cancelled` → state unchanged |
+
+Optional env for a general application: `APPLICATION_TYPE` (`adjourn` \| `set aside` \| `something else`; default `something else`), `DATE_RECEIVED` (YYYY-MM-DD, default yesterday), `SOMETHING_ELSE_DETAILS` (default `OOT refusal appeal`), `WITHIN_14_DAYS` (`yes` \| `no`), `FEE_AMOUNT` (pence, default `12600` — £126.00), `APPLIED_FOR_HWF`, `HWF_REFERENCE`, `ALL_PARTIES_AGREE`, `WITHOUT_NOTICE`, `N244_FILE`. The fee is always recorded as received.
 
 Optional env for warrant authorisation: `DATE_OF_ISSUE`, `DATE_OF_EXPIRY` (YYYY-MM-DD),
 `STATUS` (`active` \| `expired` \| `cancelled`; default `active`). Defaults: issue = today,

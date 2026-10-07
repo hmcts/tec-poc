@@ -105,11 +105,11 @@ state matrix. Prefer **real lifecycle scripts** where they exist; use
 | `pcn-awaiting-oot-validation-pe` | `TEC` | Same state with the PE form pair | Applications: OOT PE3 + PE2 | create → link registration only → OOT PE3 + PE2 → `AWAITING_OOT_VALIDATION` |
 | `pcn-awaiting-la-oot` | `TEC` | Waiting for LA OOT response (no OOT decision batch yet) | Applications: OOT TE9 + TE7 | create → link registration only → OOT apps → `AWAITING_LA_OOT_RESPONSE` |
 | `pcn-pending-refusal-decision` | `TEC` | OOT decision batch already associated. Case details shows Out of time application decision (Refused). Next step includes Review OOT refusal decision | Applications: OOT TE9 + TE7; companion Inputs | create → link registration → create/attach `outOfTimeDecisions` → link → `PENDING_REFUSAL_DECISION` |
-| `pcn-pending-oot-appeal-payment` | `TEC` | OOT appeal awaiting payment | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; companion Inputs | create → link registration → create/attach `outOfTimeDecisions` → link → OOT apps → `PENDING_OOT_APPEAL_PAYMENT` → attach N244 |
-| `pcn-oot-appeal-payment-confirmed` | `TEC` | OOT appeal payment confirmed | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; companion Inputs | same as above → `OOT_APPEAL_PAYMENT_CONFIRMED` → attach N244 |
-| `pcn-pending-oot-appeal-decision` | `TEC` | OOT appeal awaiting decision | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; companion Inputs | same as above → `PENDING_OOT_APPEAL_DECISION` → attach N244 |
-| `pcn-oot-appeal-refused` | `TEC` | OOT appeal refused | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; companion Inputs | same as above → `OOT_APPEAL_REFUSED` → attach N244 |
-| `pcn-case-revoked-oot-appeal-accepted` | `TEC` | Case revoked after OOT appeal accepted | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; companion Inputs | same as above → `CASE_REVOKED_OOT_APPEAL_ACCEPTED` → attach N244 |
+| `pcn-pending-oot-appeal-payment` | `TEC` | OOT appeal awaiting payment | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; General applications row; companion Inputs | create → link registration → create/attach `outOfTimeDecisions` → link → OOT apps → `PENDING_OOT_APPEAL_PAYMENT` → `attach_n244` |
+| `pcn-oot-appeal-payment-confirmed` | `TEC` | OOT appeal payment confirmed | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; General applications row; companion Inputs | same as above → `OOT_APPEAL_PAYMENT_CONFIRMED` → `attach_n244` |
+| `pcn-pending-oot-appeal-decision` | `TEC` | OOT appeal awaiting decision | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; General applications row; companion Inputs | same as above → `PENDING_OOT_APPEAL_DECISION` → `attach_n244` |
+| `pcn-oot-appeal-refused` | `TEC` | OOT appeal refused | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; General applications row; companion Inputs | same as above → `OOT_APPEAL_REFUSED` → `attach_n244` |
+| `pcn-case-revoked-oot-appeal-accepted` | `TEC` | Case revoked after OOT appeal accepted | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; General applications row; companion Inputs | same as above → `CASE_REVOKED_OOT_APPEAL_ACCEPTED` → `attach_n244` |
 | `pcn-warrant-issued` | `TEC` | Active warrant | none | create → link registration + shared warrant-auth complete → `STATUS=active` warrant |
 | `pcn-warrant-expired` | `TEC` | Expired warrant + reissue batch | companion Inputs | create → link registration + warrant-auth → create/attach `warrantReissueRequests` → link → expired warrant |
 | `pcn-refer-enforcement` | `TEC` | Transfer-request link side-effect | On transfer **batch** Inputs: `Batch file.xlsx` + `TE10.png` | create → link registration → create/attach `transferRequest` → link |
@@ -121,12 +121,16 @@ created inline before each type-specific link), then filler PCNs on the shared r
 batch. Every catalogue PCN links to `batch-registration-processed`. `AWAITING_OOT_VALIDATION`
 and `AWAITING_LA_OOT_RESPONSE` are registration-only for Linked Cases — the LA response that
 will arrive *via* an `outOfTimeDecisions` batch is not linked yet; that link appears on
-`PENDING_REFUSAL_DECISION` and the five OOT-appeal demos (each also attaches `N244_0622.pdf`
-under Applications).
+`PENDING_REFUSAL_DECISION` and the five OOT-appeal demos (each also records an N244
+via `attach_n244`: PDF under Applications and a General applications row).
 
 Every seeded `TEC_BATCH` gets `bin/templates/Batch file.xlsx` under Inputs via
 `attach_standard_batch_inputs`. Transfer-request batches also get `TE10.png`.
-`N244_0622.pdf` is attached only on the five OOT-appeal PCN demos via `attach_n244`.
+`N244_0622.pdf` is recorded only on the five OOT-appeal PCN demos via `attach_n244`.
+That helper runs [`bin/enter-general-application.sh`](/enter-general-application.html#local-script)
+as the respondent, so each demo has an Issued general application (something else, categories
+**OOT refusal appeal**, fee £126.00) and the PDF under Applications. Pass a second argument
+to choose the applicant (`local authority` or `respondent`).
 
 Explanations on the design page are short and aimed at designers: what to look at in ExUI.
 
@@ -184,7 +188,7 @@ record_entry \
 | `attach_standard_batch_inputs <batch-ref> [batch-type]` | Always attaches `Batch file.xlsx` → Inputs; also `TE10.png` when type is `transferRequest` |
 | `gen_application <ref> <in time\|out of time> <TE9\|PE3>` | `generate-application.sh` (Applications) |
 | `gen_time_extension <ref> <TE7\|PE2>` | `generate-time-extension.sh` (Applications) |
-| `attach_n244 <ref>` | Attaches `N244_0622.pdf` → Applications (OOT-appeal demos only) |
+| `attach_n244 <ref> [applicant]` | `enter-general-application.sh` — Issued N244 and `N244_0622.pdf` under Applications. Applicant defaults to `respondent`; other answers use that script’s defaults. OOT-appeal demos only |
 
 Quote template paths that contain spaces, e.g. `"${TEMPLATES_DIR}/Batch file.xlsx"`.
 The attach script starts the local dm-store stub if needed. Exception cases have no

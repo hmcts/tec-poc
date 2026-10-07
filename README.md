@@ -395,6 +395,27 @@ reproducible random values. The script reuses the same Python venv as
 permission sought: `Application to file out of time.pdf` or
 `Application for extension of time.pdf`).
 
+### Enter an N244 general application (local)
+
+With `bootWithCCD` running, upload the N244 and submit `enterGeneralApplication` for an
+existing PCN. Case state stays the same. Case details gains a **General applications** row
+(state **Issued**), and the PDF appears under Case File View → **Applications**.
+
+The event is clerk-only, so the script signs in as `tec-demo@test.com`.
+
+```bash
+./bin/enter-general-application.sh <case-reference> "local authority"
+./bin/enter-general-application.sh <case-reference> respondent
+APPLICATION_TYPE=adjourn WITHIN_14_DAYS=yes \
+  ./bin/enter-general-application.sh <case-reference> respondent
+```
+
+Applicant is `local authority` or `respondent`. Defaults are a something-else application
+received yesterday, categories **OOT refusal appeal**, fee £126.00. Override with
+`APPLICATION_TYPE`, `SOMETHING_ELSE_DETAILS`, `DATE_RECEIVED`, `FEE_AMOUNT` (pence),
+`APPLIED_FOR_HWF`, `HWF_REFERENCE`, `ALL_PARTIES_AGREE`, and `WITHOUT_NOTICE`.
+`DATE_RECEIVED` must be in the past. The event rejects an unpaid fee.
+
 ### Apply a warrant authorisation (local)
 
 ```bash

@@ -185,7 +185,9 @@ is not a `CaseState`.
 `enterGeneralApplication` is a clerk Next step in every PCN state. There is no feature flag.
 Submit stores the application as `GEN_APP_ISSUED` and does not change PCN state. The form, validation,
 `tec_case_general_application` table, and how Case details and Case File View are rebuilt are described
-in [Enter a general application](/enter-general-application.html). The caseworker journey starts from
+in [Enter a general application](/enter-general-application.html). Local seeding uses
+`bin/enter-general-application.sh` (clerk user; default type Something else, categories
+“OOT refusal appeal”, fee £126.00). The caseworker journey starts from
 the Case details **Next step** dropdown:
 [Enter a general application](http://localhost:4567/caseworker-journeys.html#journey-enter-a-general-application).
 
