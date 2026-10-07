@@ -253,7 +253,10 @@ SDK does not prepend it):
   placeholder HTML in `previousRegistrationsMarkdown`. No registration history is loaded yet.
 
 Search and work-basket inputs are penalty charge number and local authority (CCD `FixedList` of the 2023
-England councils — ExUI has no generic autosuggest for this control). **Search** results include the case
+England councils — ExUI has no generic autosuggest for this control). Locally, `bootWithCCD` passes ExUI
+`NODE_CONFIG` so those penalty charge number filters use a contains match for case type `TEC`
+(`wildcardSearchFields` → `penaltyChargeNumber`). That applies to users with the `caseworker` role, which
+the local demo users have. **Search** results include the case
 reference, **State**, penalty charge number, local authority, respondent lines 1–3 and vehicle registration
 number. Work-basket (Case list) result columns are case reference, penalty charge number, local authority,
 respondent line 1, vehicle registration number, and **State** (far right).

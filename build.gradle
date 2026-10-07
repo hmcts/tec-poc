@@ -250,6 +250,12 @@ tasks.withType(CftlibExec).configureEach {
   // Also write into xui.env for tools that recreate the container from that file alone.
   environment 'RSE_LIB_XUI_ENV_SERVICES_DOCUMENTS_API', 'http://host.docker.internal:4455'
   environment 'RSE_LIB_XUI_ENV_SERVICES_DOCUMENTS_API_V2', 'http://host.docker.internal:4455'
+  // ExUI has no env mapping for wildcardSearchFields. NODE_CONFIG is merged over
+  // rpx-xui-webapp config/default.json, so TEC penalty charge number filters use
+  // a contains match. Local demo users already have the caseworker role that
+  // wildcardSearchRoles allows. Single quotes survive the compose env file.
+  environment 'RSE_LIB_XUI_ENV_NODE_CONFIG',
+    '\'{"wildcardSearchFields":{"TEC":["penaltyChargeNumber"]}}\''
   environment 'SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING', 'true'
 }
 
