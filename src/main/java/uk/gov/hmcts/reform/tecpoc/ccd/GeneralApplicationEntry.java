@@ -1,6 +1,8 @@
 package uk.gov.hmcts.reform.tecpoc.ccd;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import java.time.LocalDate;
@@ -15,6 +17,9 @@ import uk.gov.hmcts.ccd.sdk.type.ListValue;
 /**
  * Event-only form for {@code enterGeneralApplication}. Unwrapped onto the case
  * with the {@code genApp} prefix so page show conditions can see the answers.
+ * CCD field ids capitalise the first letter after that prefix ({@code genAppFeeReceived}).
+ * Each property is named explicitly. A naming strategy would also rewrite nested document
+ * fields, so {@code document_url} would not bind and submit would reject the upload.
  */
 @Getter
 @Setter
@@ -26,9 +31,11 @@ public class GeneralApplicationEntry {
         typeOverride = FieldType.FixedRadioList,
         typeParameterOverride = "GeneralApplicationApplicant"
     )
+    @JsonProperty("Applicant")
     private GeneralApplicationApplicant applicant;
 
     @CCD(label = "What date was the application received?", hint = "For example, 16 4 2021")
+    @JsonProperty("DateReceived")
     private LocalDate dateReceived;
 
     @CCD(
@@ -36,9 +43,11 @@ public class GeneralApplicationEntry {
         typeOverride = FieldType.FixedRadioList,
         typeParameterOverride = "GeneralApplicationType"
     )
+    @JsonProperty("ApplicationType")
     private GeneralApplicationType applicationType;
 
     @CCD(label = "Which categories apply?", typeOverride = FieldType.TextArea)
+    @JsonProperty("SomethingElseDetails")
     private String somethingElseDetails;
 
     @CCD(
@@ -46,6 +55,7 @@ public class GeneralApplicationEntry {
         typeOverride = FieldType.FixedRadioList,
         typeParameterOverride = "YesNo"
     )
+    @JsonProperty("Within14Days")
     private YesNo within14Days;
 
     @CCD(
@@ -53,6 +63,7 @@ public class GeneralApplicationEntry {
         typeOverride = FieldType.FixedRadioList,
         typeParameterOverride = "YesNo"
     )
+    @JsonProperty("FeeReceived")
     private YesNo feeReceived;
 
     @CCD(
@@ -61,6 +72,7 @@ public class GeneralApplicationEntry {
         min = 0,
         max = 999999
     )
+    @JsonProperty("FeeAmountReceived")
     @JsonSerialize(using = ToStringSerializer.class)
     private Integer feeAmountReceived;
 
@@ -69,9 +81,11 @@ public class GeneralApplicationEntry {
         typeOverride = FieldType.FixedRadioList,
         typeParameterOverride = "YesNo"
     )
+    @JsonProperty("AppliedForHwf")
     private YesNo appliedForHwf;
 
     @CCD(label = "Enter their Help with Fees reference number", max = 60)
+    @JsonProperty("HwfReference")
     private String hwfReference;
 
     @CCD(
@@ -79,6 +93,7 @@ public class GeneralApplicationEntry {
         typeOverride = FieldType.FixedRadioList,
         typeParameterOverride = "YesNo"
     )
+    @JsonProperty("AllPartiesAgree")
     private YesNo allPartiesAgree;
 
     @CCD(
@@ -86,9 +101,12 @@ public class GeneralApplicationEntry {
         typeOverride = FieldType.FixedRadioList,
         typeParameterOverride = "YesNo"
     )
+    @JsonProperty("WithoutNotice")
     private YesNo withoutNotice;
 
     @CCD(label = "Upload general application", searchable = false)
+    @JsonProperty("Document")
+    @JsonDeserialize(using = GeneralApplicationDocumentDeserializer.class)
     private Document document;
 
     @CCD(
@@ -98,5 +116,6 @@ public class GeneralApplicationEntry {
         typeParameterOverride = "Document",
         searchable = false
     )
+    @JsonProperty("RelatedEvidence")
     private List<ListValue<Document>> relatedEvidence;
 }

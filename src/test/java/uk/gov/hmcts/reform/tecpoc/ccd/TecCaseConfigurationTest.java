@@ -21,6 +21,8 @@ import uk.gov.hmcts.ccd.sdk.api.EventPayload;
 import uk.gov.hmcts.ccd.sdk.api.callback.AboutToStartOrSubmitResponse;
 import uk.gov.hmcts.ccd.sdk.api.callback.SubmitResponse;
 import uk.gov.hmcts.ccd.sdk.type.Document;
+import uk.gov.hmcts.ccd.sdk.type.FlagLauncher;
+import uk.gov.hmcts.ccd.sdk.type.Flags;
 import uk.gov.hmcts.ccd.sdk.type.ListValue;
 
 class TecCaseConfigurationTest {
@@ -326,6 +328,22 @@ class TecCaseConfigurationTest {
         );
 
         verify(repository, never()).insertGeneralApplication(anyLong(), any());
+    }
+
+    @Test
+    void validateGeneralApplicationDetailsOmitsFlagLauncherSoCcdCanValidateTheResponse() {
+        TecCase data = new TecCase();
+        data.setGeneralApplication(adjournmentEntry(LocalDate.now().minusDays(1)));
+        data.setFlagLauncher(new FlagLauncher());
+        data.setCaseFlags(new Flags());
+
+        AboutToStartOrSubmitResponse<TecCase, CaseState> response = validateGeneralApplicationDetails(data);
+
+        assertThat(response.getErrorMessageOverride()).isNull();
+        assertThat(response.getData().getFlagLauncher()).isNull();
+        assertThat(response.getData().getCaseFlags()).isNull();
+        assertThat(response.getData().getGeneralApplication().getApplicant())
+            .isEqualTo(GeneralApplicationApplicant.RESPONDENT);
     }
 
     @Test

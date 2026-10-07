@@ -9,8 +9,6 @@ import uk.gov.hmcts.ccd.sdk.CaseView;
 import uk.gov.hmcts.ccd.sdk.CaseViewRequest;
 import uk.gov.hmcts.ccd.sdk.api.CCD;
 import uk.gov.hmcts.ccd.sdk.type.Document;
-import uk.gov.hmcts.ccd.sdk.type.FlagLauncher;
-import uk.gov.hmcts.ccd.sdk.type.Flags;
 import uk.gov.hmcts.ccd.sdk.type.ListValue;
 
 @Component
@@ -45,8 +43,8 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
             "<p class=\"govuk-body\">Roles and access (CCD shell). "
                 + "The Manage Case Work Allocation tab is not wired for TEC in this PoC.</p>"
         );
-        tecCase.setFlagLauncher(new FlagLauncher());
-        tecCase.setCaseFlags(new Flags());
+        // Leave flagLauncher and caseFlags unset. The data store validates the whole case
+        // on submit and has no validator for FlagLauncher.
         tecCase.setParties(List.of());
         tecCase.setPreviousRegistrationsMarkdown(
             "<p class=\"govuk-body\">Previous registrations will be shown here.</p>"

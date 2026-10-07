@@ -413,8 +413,8 @@ public class TecCase {
     private String rolesAndAccessMarkdown;
 
     /**
-     * Case Flags component for the Parties tab. {@link TecCaseView} supplies empty
-     * values so ExUI can render the standard flags panel. No flag data is loaded yet.
+     * Case Flags component for the Parties tab. These stay empty: the data store
+     * has no validator for {@code FlagLauncher}, so a value here fails event submit.
      * Field id {@code parties} must stay as-is: ExUI treats that collection as
      * party-level flags ({@code #ARGUMENT(Flags)}).
      */

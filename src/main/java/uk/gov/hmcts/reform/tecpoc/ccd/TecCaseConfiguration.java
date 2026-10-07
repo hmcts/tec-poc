@@ -707,7 +707,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             data.setOotRejectionEmail(null);
         }
         return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
-            .data(data)
+            .data(withoutUnvalidatableDisplayFields(data))
             .build();
     }
 
@@ -923,7 +923,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
                 .build();
         }
         return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
-            .data(details.getData())
+            .data(withoutUnvalidatableDisplayFields(details.getData()))
             .build();
     }
 
@@ -940,8 +940,23 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
                 .build();
         }
         return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
-            .data(details.getData())
+            .data(withoutUnvalidatableDisplayFields(details.getData()))
             .build();
+    }
+
+    /**
+     * {@link TecCaseView} puts an empty {@link uk.gov.hmcts.ccd.sdk.type.FlagLauncher}
+     * and {@link uk.gov.hmcts.ccd.sdk.type.Flags} on every case so the Parties tab can render.
+     * The data store has no validator for {@code FlagLauncher}, so a mid-event that echoes
+     * them fails with "No validator found for FlagLauncher".
+     */
+    private static TecCase withoutUnvalidatableDisplayFields(TecCase data) {
+        if (data == null) {
+            return null;
+        }
+        data.setFlagLauncher(null);
+        data.setCaseFlags(null);
+        return data;
     }
 
     private static void validateGeneralApplicationForSubmit(GeneralApplicationEntry entry) {

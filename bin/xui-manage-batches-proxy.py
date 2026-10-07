@@ -16,11 +16,13 @@ without it the Reasons column stays blank even when caseLinks carry CLRC007.
 
 from __future__ import annotations
 
+import gzip
 import json
 import os
 import select
 import socket
 import sys
+import zlib
 from http.client import HTTPConnection, HTTPSConnection
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
@@ -76,6 +78,26 @@ _CASE_LINKING_REASON_LOV = {
 
 def _is_case_linking_reason_lov(path: str) -> bool:
     return "lov/categories/CaseLinkingReasonCode" in path
+
+
+def _decode_upstream_body(raw: bytes, content_encoding: str | None) -> bytes:
+    """Content-Encoding is stripped as hop-by-hop, so the forwarded body must be plain.
+
+    http.client leaves gzip/deflate bytes intact. Case File View JSON crosses the
+    upstream compression threshold once documents are attached; without decoding,
+    ExUI tries to parse gzip as JSON and shows a service error.
+    """
+    if not raw or not content_encoding:
+        return raw
+    encoding = content_encoding.lower()
+    if "gzip" in encoding:
+        return gzip.decompress(raw)
+    if "deflate" in encoding:
+        try:
+            return zlib.decompress(raw)
+        except zlib.error:
+            return zlib.decompress(raw, -zlib.MAX_WBITS)
+    return raw
 
 
 def _tec_menu(create_batch_href: str) -> list[dict]:
@@ -309,7 +331,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
                 headers=headers,
             )
             upstream = conn.getresponse()
-            raw = upstream.read()
+            raw = _decode_upstream_body(upstream.read(), upstream.getheader("Content-Encoding"))
 
             if path.rstrip("/") in {p.rstrip("/") for p in _CONFIG_PATHS} and self.command == "GET":
                 try:
