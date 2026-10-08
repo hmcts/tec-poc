@@ -389,8 +389,8 @@ public class TecCase {
 
     /**
      * Standard CCD Linked Cases collection. Field id must remain {@code caseLinks}.
-     * Holds the preceding registration when this PCN's suffix is greater than 0.
-     * Batch links stay on the batch case so the PCN shows those under "linked from".
+     * Batch links are owned by the batch case ({@code caseLinks} there) so the PCN
+     * shows them under ExUI "linked from", not in this collection.
      * Registration membership is {@code tec_case.batch_case_reference}; other batch
      * types use {@code tec_batch_pcn_link}.
      */
