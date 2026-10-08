@@ -118,11 +118,15 @@ state matrix. Prefer **real lifecycle scripts** where they exist; use
 | `pcn-warrant-expired` | `TEC` | Expired warrant + reissue batch | companion Inputs | create → link registration + warrant-auth → create/attach `warrantReissueRequests` → link → expired warrant |
 | `pcn-refer-enforcement` | `TEC` | Transfer-request link side-effect | On transfer **batch** Inputs: `Batch file.xlsx` + `TE10.png` | create → link registration → create/attach `transferRequest` → link |
 | `pcn-closed` | `TEC` | Closure-request link side-effect | On closure **batch** Inputs: `Batch file.xlsx` | create → link registration → create/attach `caseClosureRequests` → link |
+| `pcn-two-previous-registrations` | `TEC` | Two earlier registrations, each on its own registration batch, plus a current registration | Applications: two in-time TE9s (PCNs of the two previous registrations); each registration batch Inputs: `Batch file.xlsx` | create → own registration batch → issue → TE9 then `add-tec-registration.sh`, twice |
+| `pcn-three-previous-registrations` | `TEC` | Three earlier registrations, each on its own registration batch, plus a current registration | Applications: three in-time TE9s (PCNs of the three previous registrations); each registration batch Inputs: `Batch file.xlsx` | create → own registration batch → issue → TE9 then `add-tec-registration.sh`, three times |
 | `exception-pending-review` | `TEC_EXCEPTION` | Exception review Tasks | none (no attach event yet) | `create-tec-exception-case.sh` |
 
 Seed order: shared batches first (so link targets exist), then catalogue PCNs (companions
 created inline before each type-specific link), then filler PCNs on the shared registration
-batch. Every catalogue PCN links to `batch-registration-processed`. `AWAITING_OOT_VALIDATION`
+batch. Catalogue PCNs link to `batch-registration-processed`, except
+`pcn-two-previous-registrations` and `pcn-three-previous-registrations`: each of their
+registrations has its own registration batch. `AWAITING_OOT_VALIDATION`
 and `AWAITING_LA_OOT_RESPONSE` are registration-only for Linked Cases — the LA response that
 will arrive *via* an `outOfTimeDecisions` batch is not linked yet; that link appears on
 `PENDING_REFUSAL_DECISION` and the five OOT-appeal demos (each also records an N244

@@ -287,8 +287,13 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getCasePaymentHistoryViewer);
 
         builder.tab("previousRegistrations", "Previous registrations")
-            .label("previousRegistrationsLabel", null, "${previousRegistrationsMarkdown}")
-            .field("previousRegistrationsMarkdown", NEVER_SHOW);
+            .label(
+                "previousRegistrationsLabel",
+                "previousRegistrations=\"\"",
+                "${previousRegistrationsMarkdown}"
+            )
+            .field("previousRegistrationsMarkdown", NEVER_SHOW)
+            .field(TecCase::getPreviousRegistrations, "previousRegistrations!=\"\"");
 
         builder.searchInputFields()
             .field(TecCase::getPcnStem, "Penalty charge number stem")

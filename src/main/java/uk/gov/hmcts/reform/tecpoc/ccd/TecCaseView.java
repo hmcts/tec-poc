@@ -1,6 +1,7 @@
 package uk.gov.hmcts.reform.tecpoc.ccd;
 
 import java.time.ZoneOffset;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Component;
 import uk.gov.hmcts.ccd.sdk.CaseView;
 import uk.gov.hmcts.ccd.sdk.CaseViewRequest;
 import uk.gov.hmcts.ccd.sdk.api.CCD;
+import uk.gov.hmcts.ccd.sdk.type.CaseLink;
 import uk.gov.hmcts.ccd.sdk.type.Document;
 import uk.gov.hmcts.ccd.sdk.type.ListValue;
 
@@ -18,6 +20,14 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
     private final TecCaseRepository repository;
 
     private static final String FORM_VALIDATION_NOT_RECORDED = "Not validated";
+
+    static final String NO_PREVIOUS_REGISTRATIONS =
+        "<p class=\"govuk-body\">There are no previous registrations.</p>";
+
+    private static final Comparator<TecCaseRegistration> BY_SUFFIX_THEN_TIME =
+        Comparator.comparingInt(TecCaseRegistration::suffix)
+            .thenComparing(TecCaseRegistration::createdAt)
+            .thenComparing(TecCaseRegistration::id);
 
     @Override
     public Set<String> caseTypeIds() {
@@ -46,9 +56,13 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
         // Leave flagLauncher and caseFlags unset. The data store validates the whole case
         // on submit and has no validator for FlagLauncher.
         tecCase.setParties(List.of());
-        tecCase.setPreviousRegistrationsMarkdown(
-            "<p class=\"govuk-body\">Previous registrations will be shown here.</p>"
+        List<TecCaseRegistration> previousRegistrations = excludingCurrent(
+            repository.findRegistrations(request.caseRef())
         );
+        tecCase.setPreviousRegistrations(
+            previousRegistrations.isEmpty() ? null : toPreviousRegistrations(previousRegistrations)
+        );
+        tecCase.setPreviousRegistrationsMarkdown(NO_PREVIOUS_REGISTRATIONS);
         FormValidationResult validationResult = tecCase.getFormValidationResult();
         String validationDisplay = validationResult == null
             ? FORM_VALIDATION_NOT_RECORDED
@@ -96,6 +110,29 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
             // fall through
         }
         return state.name();
+    }
+
+    /**
+     * Registrations other than the current one (highest suffix, then latest created time),
+     * ordered from the lowest suffix to the highest.
+     */
+    static List<TecCaseRegistration> excludingCurrent(List<TecCaseRegistration> registrations) {
+        if (registrations.size() < 2) {
+            return List.of();
+        }
+        TecCaseRegistration current = registrations.stream().max(BY_SUFFIX_THEN_TIME).orElseThrow();
+        return registrations.stream()
+            .filter(registration -> !registration.id().equals(current.id()))
+            .sorted(BY_SUFFIX_THEN_TIME)
+            .toList();
+    }
+
+    static List<ListValue<PreviousRegistration>> toPreviousRegistrations(
+        List<TecCaseRegistration> registrations
+    ) {
+        return registrations.stream()
+            .map(TecCaseView::toPreviousRegistrationListValue)
+            .toList();
     }
 
     static List<ListValue<Document>> toAllDocuments(List<TecCaseDocument> documents) {
@@ -151,6 +188,41 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
         value.setStatus(authorisation.status());
         return ListValue.<WarrantAuthorisation>builder()
             .id(authorisation.id().toString())
+            .value(value)
+            .build();
+    }
+
+    private static ListValue<PreviousRegistration> toPreviousRegistrationListValue(
+        TecCaseRegistration registration
+    ) {
+        PreviousRegistration value = new PreviousRegistration();
+        value.setFileIdentifier(registration.fileIdentifier());
+        value.setBatchIdentifier(registration.batchIdentifier());
+        if (registration.batchCaseReference() != null) {
+            value.setBatchCase(CaseLink.builder()
+                .caseReference(Long.toString(registration.batchCaseReference()))
+                .caseType(BatchCaseConfiguration.CASE_TYPE)
+                .build());
+        }
+        value.setPenaltyChargeNumber(registration.penaltyChargeNumber());
+        value.setLocalAuthority(registration.localAuthority());
+        value.setRespondentDetails1(registration.respondentDetails1());
+        value.setRespondentDetails2(registration.respondentDetails2());
+        value.setRespondentDetails3(registration.respondentDetails3());
+        value.setRespondentDetails4(registration.respondentDetails4());
+        value.setRespondentDetails5(registration.respondentDetails5());
+        value.setRespondentDetails6(registration.respondentDetails6());
+        value.setVehicleRegistrationNumber(registration.vehicleRegistrationNumber());
+        value.setNatureOfOffence(registration.natureOfOffence());
+        value.setDateChargeCertificateServed(registration.dateChargeCertificateServed());
+        value.setAmountDue(registration.amountDue());
+        value.setPaymentStatus(registration.paymentStatus());
+        value.setPaymentReference(registration.paymentReference());
+        value.setClosureReason(registration.closureReason());
+        value.setRegistrationDocument(registration.registrationDocument());
+        value.setRegistrationDate(registration.registrationDate());
+        return ListValue.<PreviousRegistration>builder()
+            .id(registration.id().toString())
             .value(value)
             .build();
     }

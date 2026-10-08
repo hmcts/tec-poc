@@ -473,8 +473,21 @@ public class TecCase {
     private String tasksMarkdown;
 
     /**
-     * Stub content for the Previous registrations tab. Populated by {@link TecCaseView}.
+     * Empty-state text for the Previous registrations tab. Populated by {@link TecCaseView}.
      */
     @CCD(label = "Previous registrations", searchable = false)
     private String previousRegistrationsMarkdown;
+
+    /**
+     * Registrations other than the current one, lowest suffix first.
+     * Populated by {@link TecCaseView}.
+     */
+    @CCD(
+        label = "Previous registrations",
+        typeOverride = FieldType.Collection,
+        typeParameterOverride = "PreviousRegistration",
+        searchable = false
+    )
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<ListValue<PreviousRegistration>> previousRegistrations;
 }

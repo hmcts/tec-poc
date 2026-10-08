@@ -266,8 +266,11 @@ SDK does not prepend it):
   (`tec_case_registration.batch_case_reference`).
 - **Payment History**: CCD tab hosting the shared `CasePaymentHistoryViewer` field (ccpay case
   transactions UI). Local content depends on Payments being wired for TEC.
-- **Previous registrations**: stub tab immediately after Payment History. `TecCaseView` supplies
-  placeholder HTML in `previousRegistrationsMarkdown`. No registration history is loaded yet.
+- **Previous registrations**: tab immediately after Payment History. When the case has only the
+  current registration, the tab says **There are no previous registrations.** When there are earlier
+  registrations, `TecCaseView` lists them in `previousRegistrations`, lowest PCN suffix first. The
+  current registration (highest suffix, then latest `created_at`) stays on Case details and is left
+  out of this collection.
 
 Search and work-basket inputs are PCN stem (filter label **Penalty charge number stem**, column **PCN stem**) and local authority (CCD `FixedList` of the 2023
 England councils — ExUI has no generic autosuggest for this control). **Search** results include the case

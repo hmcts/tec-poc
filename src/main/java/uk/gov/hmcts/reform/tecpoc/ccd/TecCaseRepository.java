@@ -92,6 +92,54 @@ public class TecCaseRepository {
         return pcns.get(0);
     }
 
+    /**
+     * Every registration on the case. Ordering for the Previous registrations tab
+     * is applied by {@link TecCaseView}.
+     */
+    public List<TecCaseRegistration> findRegistrations(long caseReference) {
+        return database.query("""
+            select id, created_at, file_identifier, batch_identifier, batch_case_reference,
+                   penalty_charge_number, local_authority,
+                   respondent_details_1, respondent_details_2, respondent_details_3,
+                   respondent_details_4, respondent_details_5, respondent_details_6,
+                   vehicle_registration_number, nature_of_offence,
+                   date_charge_certificate_served, amount_due,
+                   payment_status, payment_reference, closure_reason,
+                   registration_document, registration_date
+              from tec_case_registration
+             where case_reference = :caseReference
+            """, Map.of("caseReference", caseReference), (resultSet, rowNumber) -> {
+                Timestamp createdAt = resultSet.getTimestamp("created_at");
+                long batchCaseReference = resultSet.getLong("batch_case_reference");
+                Long batchRef = resultSet.wasNull() ? null : batchCaseReference;
+                Date registrationDate = resultSet.getDate("registration_date");
+                return new TecCaseRegistration(
+                    resultSet.getObject("id", UUID.class),
+                    createdAt == null ? null : createdAt.toInstant(),
+                    resultSet.getString("file_identifier"),
+                    resultSet.getString("batch_identifier"),
+                    batchRef,
+                    resultSet.getString("penalty_charge_number"),
+                    LocalAuthority.valueOf(resultSet.getString("local_authority")),
+                    resultSet.getString("respondent_details_1"),
+                    resultSet.getString("respondent_details_2"),
+                    resultSet.getString("respondent_details_3"),
+                    resultSet.getString("respondent_details_4"),
+                    resultSet.getString("respondent_details_5"),
+                    resultSet.getString("respondent_details_6"),
+                    resultSet.getString("vehicle_registration_number"),
+                    resultSet.getString("nature_of_offence"),
+                    resultSet.getString("date_charge_certificate_served"),
+                    resultSet.getInt("amount_due"),
+                    resultSet.getString("payment_status"),
+                    resultSet.getString("payment_reference"),
+                    resultSet.getString("closure_reason"),
+                    resultSet.getString("registration_document"),
+                    registrationDate == null ? null : registrationDate.toLocalDate()
+                );
+            });
+    }
+
     public void linkBatchCase(long caseReference, long batchCaseReference) {
         int updated = database.update("""
             update tec_case_registration

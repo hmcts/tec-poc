@@ -185,6 +185,39 @@ gen_application() {
     "${case_reference}" "${timing}" "${form}" >/dev/null
 }
 
+# A registration batch used by one registration only.
+seed_own_registration_batch() {
+  local batch_ref
+  echo "  creating registration batch..." >&2
+  BATCH_IDENTIFIER="$(unique_batch_identifier)"
+  batch_ref="$(
+    TARGET_STATE=PROCESSING_COMPLETE \
+      require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" registration
+  )"
+  attach_standard_batch_inputs "${batch_ref}" registration
+  printf '%s\n' "${batch_ref}"
+}
+
+# Record a TE9 against the registration that is current, then add the next
+# registration on a new registration batch.
+add_registration_after_te9() {
+  local case_reference="$1"
+  local response batch_ref
+  gen_application "${case_reference}" "in time" TE9
+  echo "  adding registration on ${case_reference}..." >&2
+  response="$(
+    TARGET_STATE=PROCESSING_COMPLETE \
+      "${SCRIPT_DIR}/add-tec-registration.sh" "${case_reference}"
+  )"
+  batch_ref="$(jq --raw-output '.batchCaseReference // empty' <<<"${response}")"
+  if [[ -z "${batch_ref}" ]]; then
+    echo "add-tec-registration.sh did not return batchCaseReference" >&2
+    echo "${response}" >&2
+    exit 1
+  fi
+  attach_standard_batch_inputs "${batch_ref}" registration
+}
+
 gen_time_extension() {
   local case_reference="$1"
   local form="$2"
@@ -656,6 +689,35 @@ seed_catalogue() {
     "CLOSED" \
     "${ref}" \
     "Linked Cases shows the shared registration batch and a case-closure-requests companion (Inputs: Batch file.xlsx). State is Closed."
+
+  echo "Seeding pcn-two-previous-registrations..." >&2
+  ref="$(require_demo_pcn)"
+  link_pcn_to_batch "${ref}" "$(seed_own_registration_batch)"
+  state="$(state_from_json_cmd CASE_ISSUED "${SCRIPT_DIR}/transition-to-case-issued.sh" "${ref}")"
+  add_registration_after_te9 "${ref}"
+  add_registration_after_te9 "${ref}"
+  record_entry \
+    "pcn-two-previous-registrations" \
+    "PCN — two previous registrations" \
+    "TEC" \
+    "${state}" \
+    "${ref}" \
+    "Previous registrations lists two earlier registrations, lowest suffix first. Each registration is on its own registration batch. Applications has two in-time TE9s, one for each previous registration PCN. Case details shows the latest registration only."
+
+  echo "Seeding pcn-three-previous-registrations..." >&2
+  ref="$(require_demo_pcn)"
+  link_pcn_to_batch "${ref}" "$(seed_own_registration_batch)"
+  state="$(state_from_json_cmd CASE_ISSUED "${SCRIPT_DIR}/transition-to-case-issued.sh" "${ref}")"
+  add_registration_after_te9 "${ref}"
+  add_registration_after_te9 "${ref}"
+  add_registration_after_te9 "${ref}"
+  record_entry \
+    "pcn-three-previous-registrations" \
+    "PCN — three previous registrations" \
+    "TEC" \
+    "${state}" \
+    "${ref}" \
+    "Previous registrations lists three earlier registrations, lowest suffix first. Each registration is on its own registration batch. Applications has three in-time TE9s, one for each previous registration PCN. Case details shows the latest registration only."
 
   echo "Seeding filler PCNs on shared registration (${REGISTRATION_PCN_COUNT})..." >&2
   CASE_COUNT="${REGISTRATION_PCN_COUNT}" \
