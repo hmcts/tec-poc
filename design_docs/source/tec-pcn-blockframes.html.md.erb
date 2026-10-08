@@ -7,7 +7,7 @@ weight: 45
 
 Low-fidelity **blockframes** for the TEC PCN (`TEC`) case view: grey page frames and text bars for journey boards. Not screenshots and not Mermaid — page-shaped wireframes that stay editable in git.
 
-**Penalty charge number** on Case details is the authority id, 7-digit number, check digit, and suffix `0` (Westminster seeded cases start with `WE`). Format and the check-digit calculation: [Penalty charge numbers](/penalty-charge-numbers.html).
+Case details shows the **PCN stem** above State, and the current registration's **Penalty charge number** (stem plus suffix) in Registration. Earlier registrations are on **Previous registrations**. Westminster seeded cases start with `WE`. Format and the check-digit calculation: [Penalty charge numbers](/penalty-charge-numbers.html).
 
 Each frame is labelled with the screen or view name. Hover any grey block for the element it represents. Use `bf-text--callout` (or `callout: true` on text partials) for GOV.UK black heading/copy, and `bf-action--callout` on links/actions for GOV.UK link blue. Reuse the primitives when adding Batch or Exception journeys later.
 
@@ -17,7 +17,7 @@ Each frame is labelled with the screen or view name. Hover any grey block for th
 
 ## Case shell catalogue
 
-Six application tabs from `TecCaseConfiguration` (plus CCD History after Case File View, not shown). Tasks includes three card shapes from the prototype Tasks tab: assigned with Next steps, unassigned (Manage only), and assigned to someone else (no Next steps).
+Tabs from `TecCaseConfiguration`. CCD History, after Case File View, is omitted unless that tab is active. Tasks includes three card shapes from the prototype Tasks tab: assigned with Next steps, unassigned (Manage only), and assigned to someone else (no Next steps).
 
 <div class="bf-catalogue">
 <%= partial "partials/blockframe/views/tec_pcn_tasks" %>
@@ -81,7 +81,7 @@ The showcase frame below includes one control for each CCD field type used on ev
 
 Same Tasks shell as the catalogue, but only **Manage cases**, the **case number**, and the **Validate OOT application** task card have visible text. Everything else is empty bars with varied widths. All elements in that task card use callout styling.
 
-The Case list frame mirrors ExUI `/cases`: **Case list** heading, **Hide Filter**, then a split with work-basket **filters** (heading + Apply/Reset, full-width fields, Back to top) on the left and **Your cases** (result count + table) on the right. The wide version uses a 6-column table (Case Number, PCN, local authority, respondent details 1, VRN, **State** at the far right); the compact version below matches the standard frame width with a 4-column table ending in **State**. Callouts: Manage cases, Case list, Filters, Case type (`TEC PCN`), Your cases, and Case Number (column + one row). Find case **search** results (not shown here) also include a **State** column after Case Number for `TEC`, `TEC_BATCH`, and `TEC_EXCEPTION`.
+The Case list frame mirrors ExUI `/cases`: **Case list** heading, **Hide Filter**, then a split with work-basket **filters** (heading + Apply/Reset, full-width fields, Back to top) on the left and **Your cases** (result count + table) on the right. The wide version uses a 6-column table (Case Number, PCN stem, local authority, respondent details 1, VRN, **State** at the far right); the compact version below matches the standard frame width with a 4-column table ending in **State**. Callouts: Manage cases, Case list, Filters, Case type (`TEC PCN`), Your cases, and Case Number (column + one row). Find case **search** results (not shown here) also include a **State** column after Case Number for `TEC`, `TEC_BATCH`, and `TEC_EXCEPTION`.
 
 <div class="bf-catalogue">
 <%= partial "partials/blockframe/views/tec_pcn_tasks_minimal" %>

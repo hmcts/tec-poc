@@ -20,7 +20,7 @@
 <%
   head_cells = [
     '<span class="bf-table__cell bf-table__cell--head bf-table__cell--callout" title="Case Number (column)">Case Number</span>',
-    '<span class="bf-table__cell bf-table__cell--head" title="Penalty charge number (column)"><span class="bf-table__bar bf-table__bar--head" style="width: 90%"></span></span>',
+    '<span class="bf-table__cell bf-table__cell--head" title="PCN stem (column)"><span class="bf-table__bar bf-table__bar--head" style="width: 90%"></span></span>',
     '<span class="bf-table__cell bf-table__cell--head" title="Local authority (column)"><span class="bf-table__bar bf-table__bar--head" style="width: 70%"></span></span>'
   ]
   unless compact
@@ -78,7 +78,7 @@
   (highlight_state ?
     '<div class="bf-cases__filter bf-cases__filter--highlight" title="State filter"><span class="bf-cases__filter-label bf-cases__filter-label--callout" title="State">State</span><span class="bf-cases__filter-control" title="State select"></span></div>' :
     '<div class="bf-cases__filter" title="State filter"><span class="bf-cases__filter-label" title="State" style="width: 28%"></span><span class="bf-cases__filter-control" title="State select"></span></div>'),
-  '<div class="bf-cases__filter" title="Penalty charge number filter"><span class="bf-cases__filter-label" title="Penalty charge number" style="width: 78%"></span><span class="bf-cases__filter-control bf-cases__filter-control--input" title="Penalty charge number input"></span></div>',
+  '<div class="bf-cases__filter" title="Penalty charge number stem filter"><span class="bf-cases__filter-label" title="Penalty charge number stem" style="width: 78%"></span><span class="bf-cases__filter-control bf-cases__filter-control--input" title="Penalty charge number stem input"></span></div>',
   '<div class="bf-cases__filter" title="Local authority filter"><span class="bf-cases__filter-label" title="Local authority" style="width: 58%"></span><span class="bf-cases__filter-control" title="Local authority select"></span></div>',
   '<span class="bf-action bf-action--primary bf-cases__back-top" title="Back to top" style="width: 22px"></span>',
   '</div>',

@@ -2,6 +2,8 @@ package uk.gov.hmcts.reform.tecpoc.ccd;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -36,6 +38,20 @@ class TecCaseViewPreviousRegistrationsTest {
         TecCaseRegistration later = registration("AB0531612A1", "2026-06-01T00:00:00Z");
 
         assertThat(TecCaseView.excludingCurrent(List.of(later, earlier))).containsExactly(earlier);
+    }
+
+    @Test
+    void emptyCollectionIsPresentAsNullSoTheEmptyStateLabelCanMatch() throws Exception {
+        TecCase tecCase = new TecCase();
+        tecCase.setPreviousRegistrations(null);
+        tecCase.setPreviousRegistrationsMarkdown(TecCaseView.NO_PREVIOUS_REGISTRATIONS);
+
+        JsonNode json = new ObjectMapper().valueToTree(tecCase);
+
+        assertThat(json.has("previousRegistrations")).isTrue();
+        assertThat(json.get("previousRegistrations").isNull()).isTrue();
+        assertThat(json.get("previousRegistrationsMarkdown").asText())
+            .contains("There are no previous registrations.");
     }
 
     @Test

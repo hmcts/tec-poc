@@ -480,7 +480,9 @@ public class TecCase {
 
     /**
      * Registrations other than the current one, lowest suffix first.
-     * Populated by {@link TecCaseView}.
+     * Populated by {@link TecCaseView}. Kept in the case JSON when null: ExUI
+     * only treats a missing collection as not empty, so the empty-state label
+     * ({@code previousRegistrations=""}) would stay hidden.
      */
     @CCD(
         label = "Previous registrations",
@@ -488,6 +490,6 @@ public class TecCase {
         typeParameterOverride = "PreviousRegistration",
         searchable = false
     )
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     private List<ListValue<PreviousRegistration>> previousRegistrations;
 }

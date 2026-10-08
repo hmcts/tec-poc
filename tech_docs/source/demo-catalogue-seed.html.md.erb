@@ -36,15 +36,20 @@ flowchart TD
   create["create-tec-batch / create-tec-case / create-tec-exception-case"]
   mutate["set-case-state / transition-to-case-issued / apply-warrant-authorisation / link-pcn-to-batch / …"]
   partial["design_docs … _local_demo_case_links.html.erb gitignored"]
+  examples["design_docs … _previous_registration_examples.html.erb gitignored"]
   page["design_docs … local-demo-cases.html.md.erb committed"]
+  pcnPage["design_docs … penalty-charge-numbers.html.md.erb committed"]
   exui["Manage Cases :3000"]
 
   orch --> clear
   orch --> create
   create --> mutate
   orch -->|"writes refs + explanations"| partial
+  orch -->|"writes previous-registration case numbers"| examples
   page -->|"includes partial or fallback"| partial
+  pcnPage -->|"includes examples or fallback"| examples
   partial -->|"case-details URLs"| exui
+  examples -->|"case-details URLs"| exui
 ```
 
 | Piece | Role | In git? |
@@ -53,14 +58,16 @@ flowchart TD
 | Scenario catalogue (data inside the script) | Stable ids, titles, explanations, recipe steps | Yes |
 | `design_docs/source/local-demo-cases.html.md.erb` | Intro, how to run, warning that links are local-only | Yes |
 | `design_docs/source/partials/_local_demo_case_links.html.erb` | Generated table of links | **No** (gitignored) |
+| `design_docs/source/partials/_previous_registration_examples.html.erb` | Case numbers for the two previous-registration demos | **No** (gitignored) |
+| `design_docs/source/penalty-charge-numbers.html.md.erb` | Stem and suffix, and the generated example case numbers | Yes |
 | `bin/.demo-catalogue.json` | Machine-readable dump of last seed | **No** (gitignored) |
 
 ### Why split prose from refs
 
 CCD case references are allocated at create time. After every
 `clear-tec-cases` + re-seed they change. Committing them would break links for other developers
-and for any published design docs. The committed page explains the catalogue; the generated
-partial holds only the current machine’s refs.
+and for any published design docs. The committed pages explain the catalogue and the PCN
+stem and suffix. The generated partials hold only the current machine’s case numbers.
 
 ### How create-script output is consumed
 
@@ -290,8 +297,9 @@ state="$(
    **before** linking to it; seed shared batches before PCNs that reference them.
 5. Keep **`id`s stable** if designers bookmark `#demo-…` anchors.
 6. Update the [scenario catalogue](#scenario-catalogue) table on this page when the set of demos changes.
-7. Do **not** hand-edit `design_docs/source/partials/_local_demo_case_links.html.erb` —
-   it is gitignored and overwritten on every seed.
+7. Do **not** hand-edit `design_docs/source/partials/_local_demo_case_links.html.erb` or
+   `design_docs/source/partials/_previous_registration_examples.html.erb` —
+   they are gitignored and overwritten on every seed.
 
 ### Light tuning without editing recipes
 
@@ -333,8 +341,10 @@ Script: `bin/seed-demo-catalogue.sh`.
 3. For each catalogue entry, run the recipe via existing scripts; collect
    `{ id, title, caseType, state, caseReference, url, explanation }`.
 4. Write `design_docs/source/partials/_local_demo_case_links.html.erb` (HTML table).
-5. Write `bin/.demo-catalogue.json` for debugging.
-6. Print to stderr: count created, paths, design docs URL
+5. Write `design_docs/source/partials/_previous_registration_examples.html.erb` with the case
+   numbers for `pcn-two-previous-registrations` and `pcn-three-previous-registrations`.
+6. Write `bin/.demo-catalogue.json` for debugging.
+7. Print to stderr: count created, paths, design docs URL
    `http://localhost:4567/local-demo-cases.html`.
 
 Optional env: `TEC_API_URL`, `EXUI_BASE_URL`, `DESIGN_DOCS_URL`,
@@ -354,6 +364,10 @@ Committed shell: `design_docs/source/local-demo-cases.html.md.erb`
 - Intro and prerequisites (`bootWithCCD`, clerk login, ExUI on **:3000**).
 - How to regenerate: `./bin/seed-demo-catalogue.sh`.
 - Includes the generated partial when present; otherwise a fallback to run the seed.
+
+[Penalty charge numbers](http://localhost:4567/penalty-charge-numbers.html#seeded-examples)
+includes `_previous_registration_examples.html.erb` when the seed has written it, so that page
+shows the case numbers for the two demos with previous registrations.
 
 ## Related
 

@@ -5,10 +5,30 @@ weight: 32
 
 # Penalty charge numbers
 
-A penalty charge number (PCN) identifies one registration or one received form. Local seed scripts
-build the first registration with `bin/generate-pcn-number.sh`. The case stores the **PCN stem**
-(everything except the final suffix digit). Each registration and each TE9, TE7, PE3, and PE2 row
-stores its own full PCN.
+A penalty charge number (PCN) identifies one registration or one received form. It is the case's
+**PCN stem** plus a one-digit suffix.
+
+## Stem and suffix
+
+The case stores one stem, set when the case is created and never changed. Case details shows it
+above State. Search and the case list use the same value (filter **Penalty charge number stem**,
+column **PCN stem**).
+
+Each registration stores a full PCN: the stem plus a suffix. Local seed scripts build the first
+registration with `bin/generate-pcn-number.sh`, which always uses suffix `0`. A later registration
+uses the stem plus one more than the highest existing registration suffix. A suffix above `9` is
+rejected. Case details Registration, and any edit of that registration, use the current row: the
+highest suffix, then the latest `created_at`. The Previous registrations tab lists every earlier
+registration, lowest suffix first, and leaves the current row out. When there is no earlier row,
+the tab says **There are no previous registrations.**
+
+Each TE9, TE7, PE3, and PE2 row stores the full PCN of the registration that was current when the
+form was recorded. The same form PCN may be stored more than once.
+
+Stem `WE70599899` with three registrations is `WE705998990`, `WE705998991` (both previous), and
+`WE705998992` (current). The design docs page lists the seeded cases that demonstrate this, with
+their case numbers, after `bin/seed-demo-catalogue.sh`:
+[Penalty charge numbers — seeded examples](http://localhost:4567/penalty-charge-numbers.html#seeded-examples).
 
 ## Format
 
@@ -23,12 +43,9 @@ AA9999999X9
 | `X` | 1 character | Mod 11 check digit (`0`–`9`, or `A` when the remainder is 10) |
 | `9` | 1 digit | Numeric suffix |
 
-The suffix is **not** included in the check-digit calculation. The first registration on a case
-uses suffix `0`. A later registration uses the stem plus one more than the highest existing
-registration suffix, and a suffix above `9` is rejected. A received form uses the current
-registration's full PCN (the highest registration suffix). The same form PCN may be stored more
-than once. A 2-letter authority produces 11 characters (`WE705998990`). A 3-letter authority
-produces 12 (`WCC123456700`).
+The suffix is **not** included in the check-digit calculation. A 2-letter authority produces a
+10-character stem and an 11-character PCN (`WE70599899` and `WE705998990`). A 3-letter authority
+produces 11 and 12 (`WCC12345670` and `WCC123456700`).
 
 The create API accepts `^[A-Z]{2,3}[0-9]{7}[0-9A]0$` (suffix `0` only). The case then stores the
 stem `^[A-Z]{2,3}[0-9]{7}[0-9A]$`. On a registration the file identifier

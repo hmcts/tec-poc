@@ -5,8 +5,21 @@ weight: 44
 
 # Penalty charge numbers
 
-Case details shows **Penalty charge number** on a TEC PCN. The same value is repeated on an
-application where the form quotes the PCN. It is one string, not a CCD case reference.
+A TEC case has one **PCN stem** and one or more **penalty charge numbers**. A penalty charge
+number is not a CCD case reference.
+
+**PCN stem** is at the top of Case details, above State. It is also the case list column
+(**PCN stem**) and the search filter (**Penalty charge number stem**). It identifies the case and
+does not change when another registration is added.
+
+**Penalty charge number** is the stem plus a one-digit suffix. Each registration has its own. The
+Registration section on Case details shows the current registration: the highest suffix. Earlier
+registrations are listed on **Previous registrations**, lowest suffix first. When the case has only
+its current registration, that tab says **There are no previous registrations.**
+
+A received form (TE9, TE7, PE3, or PE2) stores the full penalty charge number of the registration
+that was current when the form was recorded. That can be an earlier suffix than the one shown in
+Registration.
 
 Technical detail, the authority-id map, and the seed scripts are on the tech docs site:
 [Penalty charge numbers](http://localhost:4568/pcn-number.html).
@@ -14,25 +27,63 @@ Technical detail, the authority-id map, and the seed scripts are on the tech doc
 ## What the number looks like
 
 ```text
-AA9999999X0
+AA9999999X9
 ```
 
 | Part | What it is | Example |
 | --- | --- | --- |
-| `AA` | Local authority id, 2 or 3 letters | `WE` for Westminster, `MC` for Manchester |
-| `9999999` | Unique 7-digit number for that authority | `2468037` |
-| `X` | Check digit | `8`, or `A` when the calculation leaves a remainder of 10 |
-| `0` | Numeric suffix | Always `0` on cases seeded here |
+| `AA` | Local authority id, 2 or 3 letters. Part of the stem | `WE` for Westminster, `MC` for Manchester |
+| `9999999` | Unique 7-digit number for that authority. Part of the stem | `2468037` |
+| `X` | Check digit. Part of the stem | `8`, or `A` when the calculation leaves a remainder of 10 |
+| `9` | Numeric suffix. Not part of the stem | `0` on the first registration; `1`, `2`, and so on for later ones |
 
-A Westminster number is 11 characters, for example `WE705998990`. A 3-letter authority id makes 12
-characters, for example `WCC123456700`.
+The stem is everything except that final digit: `AA9999999X`.
+
+A Westminster stem is 10 characters, for example `WE70599899`. Its penalty charge numbers are 11
+characters, for example `WE705998990`. A 3-letter authority id makes a stem of 11 characters and a
+penalty charge number of 12, for example `WCC123456700`.
 
 The letters are the TEC authority id. They are not the FixedList code shown as **Local authority**
-(`westminster`, `manchesterCityCouncil`). Seeded catalogue cases use Westminster, so their penalty
-charge numbers start with `WE`. File identifier and batch identifier on the same case start with
-`RWE`.
+(`westminster`, `manchesterCityCouncil`). Seeded catalogue cases use Westminster, so their stems
+and penalty charge numbers start with `WE`. File identifier and batch identifier on a registration
+start with `RWE`.
 
-The final `0` is a suffix for a later reissue of the same charge. It is not part of the check digit.
+The suffix marks another registration of the same charge. It is not part of the check digit. The
+first registration is `0`. The next registration on that case is one higher, up to `9`.
+
+## One case, several registrations
+
+Stem `WE70599899`:
+
+| Registration | Penalty charge number | Where it appears |
+| --- | --- | --- |
+| First | `WE705998990` | Previous registrations |
+| Second | `WE705998991` | Previous registrations |
+| Current | `WE705998992` | Case details, Registration |
+
+## Seeded examples
+
+`./bin/seed-demo-catalogue.sh` writes the case numbers for the catalogue cases that have previous
+registrations. Each of those registrations is on its own registration batch. Refresh this page
+after a seed.
+
+<%
+  examples_partial = "partials/previous_registration_examples"
+  examples_path = File.join(config[:source], "partials", "_previous_registration_examples.html.erb")
+%>
+<% if File.exist?(examples_path) %>
+<%= partial examples_partial %>
+<% else %>
+<div class="govuk-warning-text">
+  <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+  <strong class="govuk-warning-text__text">
+    <span class="govuk-visually-hidden">Warning</span>
+    No seeded case numbers yet. Run
+    <code>./bin/seed-demo-catalogue.sh</code> (with the stack up) to create the examples and write
+    <code>design_docs/source/partials/_previous_registration_examples.html.erb</code>.
+  </strong>
+</div>
+<% end %>
 
 ## Check digit
 
@@ -66,6 +117,7 @@ The body `LR2468037` becomes `LR246803780`.
 1. `L` is 2 and `R` is 8.
 2. `(2×9) + (8×8) + (2×7) + (4×6) + (6×5) + (8×4) + (0×3) + (3×2) + (7×1) = 195`.
 3. 11 goes into 195 seventeen times (`187`), and `195 − 187 = 8`.
-4. The check digit is `8`. The suffix on a seeded case is `0`.
+4. The check digit is `8`. The stem is `LR24680378`. The first registration's suffix is `0`, so that
+   penalty charge number is `LR246803780`. The next registration on the same case is `LR246803781`.
 
-`LR0000005` leaves a remainder of 10, so its check digit is `A`: `LR0000005A0`.
+`LR0000005` leaves a remainder of 10, so its check digit is `A`. The stem is `LR0000005A` and the first registration is `LR0000005A0`.

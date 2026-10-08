@@ -1,7 +1,7 @@
 <%#
   Tab strip for TEC case views.
   Locals:
-    active        — :tasks | :roles | :parties | :case_details | :case_file | :linked | :payment | :history
+    active        — :tasks | :roles | :parties | :case_details | :case_file | :linked | :payment | :previous | :history
     minimal       — empty tab bars (no labels)
     highlight_tab — tab key to yellow-outline (journey focus)
     variant       — :batch uses the TEC Batch tab set (Batch details, History always shown)
@@ -24,7 +24,8 @@
   [:case_details, "Case details"],
   [:case_file, "Case File View"],
   [:linked, "Linked Cases"],
-  [:payment, "Payment History"]
+  [:payment, "Payment History"],
+  [:previous, "Previous registrations"]
 ] %>
 <%# CCD History sits after Case File View; omit from the usual shell unless that tab is active. %>
 <% if active == :history %>

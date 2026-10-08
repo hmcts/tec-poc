@@ -21,7 +21,7 @@ Prefer these files over inventing CCD / ExUI topology. They are the GOV.UK Tech 
 
 Tech docs overview: [`tech_docs/source/index.html.md.erb`](tech_docs/source/index.html.md.erb).
 Design docs (blockframes / nesting demo): [`design_docs/source/index.html.md.erb`](design_docs/source/index.html.md.erb).
-Penalty charge number format for designers: [`design_docs/source/penalty-charge-numbers.html.md.erb`](design_docs/source/penalty-charge-numbers.html.md.erb).
+PCN stem and suffix for designers: [`design_docs/source/penalty-charge-numbers.html.md.erb`](design_docs/source/penalty-charge-numbers.html.md.erb).
 
 ## Local preview
 
