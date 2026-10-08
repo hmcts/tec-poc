@@ -329,6 +329,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .mandatory(TecCase::getFileIdentifier)
             .mandatory(TecCase::getBatchIdentifier)
             .mandatory(TecCase::getPenaltyChargeNumber)
+            .optional(TecCase::getPcnStem, NEVER_SHOW)
             .mandatory(TecCase::getLocalAuthority)
             .mandatory(TecCase::getRespondentDetails1)
             .mandatory(TecCase::getRespondentDetails2)
