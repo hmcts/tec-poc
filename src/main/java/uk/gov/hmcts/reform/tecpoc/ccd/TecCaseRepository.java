@@ -121,6 +121,24 @@ public class TecCaseRepository {
             .addValue("batchCaseReference", batchCaseReference));
     }
 
+    /**
+     * Case reference for a penalty charge number.
+     * Returns null when there is not exactly one matching case.
+     */
+    public Long findCaseReferenceByPenaltyChargeNumber(String penaltyChargeNumber) {
+        List<Long> references = database.query("""
+            select case_reference
+              from tec_case
+             where penalty_charge_number = :penaltyChargeNumber
+             order by case_reference
+            """, Map.of("penaltyChargeNumber", penaltyChargeNumber),
+            (resultSet, rowNumber) -> resultSet.getLong("case_reference"));
+        if (references.size() != 1) {
+            return null;
+        }
+        return references.get(0);
+    }
+
     public boolean exists(long caseReference) {
         Integer count = database.queryForObject(
             """
