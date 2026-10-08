@@ -83,8 +83,8 @@ batch_number="$(printf '%06d' "$(((case_seed * 37) % 1000000))")"
 
 if [[ -n "${PENALTY_CHARGE_NUMBER:-}" ]]; then
   penalty_charge_number="${PENALTY_CHARGE_NUMBER}"
-  if [[ ! "${penalty_charge_number}" =~ ^([A-Z]{2,3})[0-9]{7}[0-9A][0-9]$ ]]; then
-    echo "PENALTY_CHARGE_NUMBER must be an authority id, 7 digits, a check digit, and a suffix" >&2
+  if [[ ! "${penalty_charge_number}" =~ ^([A-Z]{2,3})[0-9]{7}[0-9A]0$ ]]; then
+    echo "PENALTY_CHARGE_NUMBER must be an authority id, 7 digits, a check digit, and suffix 0" >&2
     exit 1
   fi
   authority_code="${BASH_REMATCH[1]}"

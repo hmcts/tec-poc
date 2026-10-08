@@ -39,7 +39,7 @@ The relevant application classes are:
   fields, events and Java event handlers.
 - `CaseFileCategory`: document folders shown in the Case File View for PCN cases.
 - `TecCaseDocument`: persisted Case File View document metadata.
-- `TecCaseRepository`: persistence of TEC-owned business data in `public.tec_case`.
+- `TecCaseRepository`: persistence of TEC-owned business data in `public.tec_case` and the registration and form tables.
 - `TecCaseView`: reconstruction of a CCD-facing `TecCase` from the business table.
 - `TecCaseWarrantAuthorisation` / `WarrantAuthorisation`: warrant authorisation rows and CCD complex type.
 - `TecCaseGeneralApplication` / `GeneralApplication` / `GeneralApplicationEntry`: general application rows, the Case details collection, and the clerk entry form.
@@ -116,17 +116,18 @@ The event handlers update TEC-owned data as follows:
 
 | Event | Required event data | Business write | Resulting state |
 | --- | --- | --- | --- |
-| `createTecCase` | Registration-request fields including local authority; respondent lines 4–6 are optional | Inserts `public.tec_case`; `payment_status` defaults to `PENDING` | `PENDING_CASE_ISSUED` |
+| `createTecCase` | Registration-request fields including local authority; respondent lines 4–6 are optional. PCN suffix must be `0` | Inserts `public.tec_case` (PCN stem, list copies) and the first `public.tec_case_registration`; `payment_status` defaults to `PENDING` | `PENDING_CASE_ISSUED` |
 | `registrationPaymentSucceeded` | `paymentReference` | Sets payment status to `SUCCEEDED` and stores the reference | `CASE_ISSUED` |
 | `registrationAuthorised` | `registrationDocument` | Stores the document value and the application server's current date | `AWAITING_RESPONDENT_RESPONSE` |
 | `attachCaseFileDocument` | `caseFileDocument` (CCD Document with `category_id`) | Inserts `public.tec_case_document` | unchanged |
-| `linkBatchCase` | `batchLinkCase` (`CaseLink`) + `batchLinkType` (`BatchOperation`, must match the batch) | Registration: sets `public.tec_case.batch_case_reference`. Other types: upserts `public.tec_batch_pcn_link` (does not change `batch_case_reference` / Case details **Batch case**) | `TRANSFER_REQUEST` → `REFER_FOR_ENFORCEMENT`; `CASE_CLOSURE_REQUESTS` → `CLOSED`; otherwise unchanged |
-| `recordApplication` | Optional TE9/PE3 OCR application fields | Upserts application columns on `public.tec_case` | unchanged |
-| `editTe9Application` | Optional TE9 application fields (clerk; no PCN) | Updates TE9 application columns except form and PCN | unchanged |
-| `editPe3Application` | Optional PE3 application fields (clerk; no PCN) | Updates PE3 application columns except form and PCN | unchanged |
-| `recordTimeExtension` | Optional TE7/PE2 time-extension fields | Upserts time-extension columns on `public.tec_case` | unchanged |
-| `editTe7Application` | Optional TE7 fields (clerk; no PCN) | Updates TE7 columns except form and PCN | unchanged |
-| `editPe2Application` | Optional PE2 fields (clerk; no PCN) | Updates PE2 columns except form and PCN | unchanged |
+| `linkBatchCase` | `batchLinkCase` (`CaseLink`) + `batchLinkType` (`BatchOperation`, must match the batch) | Registration: sets the current `public.tec_case_registration.batch_case_reference` when that row has no other batch. Other types: upserts `public.tec_batch_pcn_link` | `TRANSFER_REQUEST` → `REFER_FOR_ENFORCEMENT`; `CASE_CLOSURE_REQUESTS` → `CLOSED`; otherwise unchanged |
+| `addRegistration` | New registration fields (system). PCN is the stem plus the next suffix | Inserts `public.tec_case_registration`. Does not change case-list columns. Payment defaults to `PENDING` | unchanged |
+| `recordApplication` | Optional TE9/PE3 OCR application fields. Form PCN must match the current registration | Inserts `public.tec_case_te9` or `public.tec_case_pe3` | unchanged |
+| `editTe9Application` | Optional TE9 application fields (clerk; no PCN) | Updates the current TE9 row except form and PCN | unchanged |
+| `editPe3Application` | Optional PE3 application fields (clerk; no PCN) | Updates the current PE3 row except form and PCN | unchanged |
+| `recordTimeExtension` | Optional TE7/PE2 time-extension fields. Form PCN must match the current registration | Inserts `public.tec_case_te7` or `public.tec_case_pe2` | unchanged |
+| `editTe7Application` | Optional TE7 fields (clerk; no PCN) | Updates the current TE7 row except form and PCN | unchanged |
+| `editPe2Application` | Optional PE2 fields (clerk; no PCN) | Updates the current PE2 row except form and PCN | unchanged |
 | `applyWarrantAuthorisation` | `warrantAuthorisation` (date of issue, date of expiry, status) | Inserts `public.tec_case_warrant_authorisation` | `active` → `WARRANT_AUTHORISATION_ISSUED`; `expired` → `WARRANT_AUTHORISATION_EXPIRED`; `cancelled` → unchanged |
 | `setCaseState` | `targetCaseState` | None (prototype helper) | the requested `CaseState` |
 | `enterGeneralApplication` | General application form (applicant, type, fee, consent, uploaded N244) | Inserts `public.tec_case_general_application` with state `GEN_APP_ISSUED`; N244 goes to `tec_case_document` category `applications`, related evidence to `uncategorisedDocuments` | unchanged |
@@ -147,26 +148,37 @@ no args shows help) so each new PCN is linked after
 create. The create scripts verify the batch exists and is `TEC_BATCH` before creating any
 PCNs. Clerks have read access so **Link batch case** appears in PCN History (with the linked batch
 in event details). For **registration** batches, `TecCaseRepository` persists
-`batch_case_reference` (FK to `tec_batch`) and Case details shows the **Batch case** field
-reconstructed as a `CaseLink` with `CaseType` `TEC_BATCH`. For other batch types (e.g. warrant
-auth), membership is stored in `tec_batch_pcn_link` and Case details **Batch case** is unchanged.
+`tec_case_registration.batch_case_reference` (FK to `tec_batch`) on the current registration and
+Case details shows that row's **Batch case** field reconstructed as a `CaseLink` with `CaseType`
+`TEC_BATCH`. A case may belong to more than one registration batch, one per registration. Linking
+fails only when that current registration is already tied to a different batch. For other batch
+types (e.g. warrant auth), membership is stored in `tec_batch_pcn_link` and Case details **Batch
+case** is unchanged.
 `TRANSFER_REQUEST` links move the PCN to `REFER_FOR_ENFORCEMENT`; `CASE_CLOSURE_REQUESTS` links
 move it to `CLOSED`; other batch types leave PCN state unchanged.
 The same script then submits **`linkPcnCases`** on the batch (full `caseLinks` collection with the
 operation-specific reason) so ExUI **linked to** / **linked from** are populated via CCD
 `case_link`.
 
+`addRegistration` is system-only and hidden from ExUI. It inserts another registration row. The
+PCN is the case stem plus the next suffix. Case-list copies of local authority, respondent
+details, and vehicle registration stay as they were at create. Local seeding uses
+`bin/add-tec-registration.sh`.
+
 `recordApplication` is likewise system-only and hidden from ExUI. Integrations submit OCR-extracted
-TE9 or PE3 fields via this event; Case details shows them under the **Applications** section.
+TE9 or PE3 fields via this event. Each submit inserts a new row. Case details shows the current
+TE9 and the current PE3 (highest PCN suffix, then latest `created_at`) in their own sections.
 
 `recordTimeExtension` is system-only and hidden from ExUI. Integrations submit OCR-extracted TE7 or
-PE2 fields via this event; Case details shows them under a heading driven by the form
+PE2 fields via this event. Each submit inserts a new row. Case details shows the current TE7 and
+the current PE2 under a heading driven by the form
 (**Application to file out of time** / **Application for extension of time** for TE7 by permission
 sought; **Application to file out of time** for PE2).
 
 `editTe9Application`, `editPe3Application`, `editTe7Application`, and `editPe2Application` are
-clerk-facing and appear in Manage Case Next steps only when the matching form is on the case
-(`applicationForm` or `timeExtensionForm`). They are not offered in `AWAITING_LA_OOT_RESPONSE`.
+clerk-facing and appear in Manage Case Next steps when that form exists on the case, including
+when more than one form type is present. They are not offered in `AWAITING_LA_OOT_RESPONSE`.
+About-to-start loads the current row of that form. Submit updates only that row.
 In `AWAITING_OOT_VALIDATION` the clerk Next step menu also includes **Validate OOT application**
 (`verifyFormValidation`), alongside whichever of those edit events match the forms on the case
 (TE9 with TE7, or PE3 with PE2). The event's first page asks whether the form is valid. **Form
@@ -223,19 +235,20 @@ SDK does not prepend it):
   `parties` collection (field id must stay `parties`) uses `#ARGUMENT(Flags)` when `flagLauncher`
   is present. `TecCaseView` supplies an empty launcher, empty case-level `caseFlags`, and an empty
   `parties` list. No flag data is loaded, and there are no create or manage flag events yet.
-- **Case details**: view-only **State** at the top (from CCD state via `TecCaseView`), then a
-  **Registration** section containing identifiers (including a **Batch case**
-  `CaseLink` to the related registration `TEC_BATCH` case when `batch_case_reference` is set), local authority, respondent lines, vehicle/offence details,
+- **Case details**: view-only **PCN stem** at the top, then **State** (from CCD state via `TecCaseView`), then a
+  **Registration** section for the current registration (highest PCN suffix), including a **Batch case**
+  `CaseLink` to that registration's `TEC_BATCH` case when its batch link is set, local authority, respondent lines, vehicle/offence details,
   certificate date, amount, and registration workflow fields (payment status/reference, closure reason, registration
   document and date); when the case is **Pending refusal decision**, an **Out of time application decision**
-  section immediately below Registration with **Decision** **Refused**; an application section headed by form and timeliness
-  (**Witness statement** or **Statutory declaration**, each **In time** or **Out of time**) with
-  **Form validation result** at the top, then OCR-extracted TE9/PE3 data (date received, type, form, PCN/VRN,
-  applicant and address fields, declaration, and conditional fields such as TE7 submitted, PE3 reasons
-  given, and TE9 payment details); and a time-extension section headed by TE7 permission sought
-  (**Application to file out of time** or **Application for extension of time**) or
-  **Application to file out of time** for PE2, again with **Form validation result** at the top (same shared
-  case value), then form, PCN/VRN, respondent details, permission sought, reasons given, signed and dated,
+  section immediately below Registration with **Decision** **Refused**; then the current TE9, if any
+  (**Witness statement - In time** or **Out of time**), and the current PE3, if any
+  (**Statutory declaration - In time** or **Out of time**). Each visible form section starts with
+  **Form validation result** (the shared case value) and then that form's fields (date received, type,
+  form, PCN/VRN, applicant and address, declaration, and conditional fields such as TE7 submitted, PE3
+  reasons given, and TE9 payment details). Then the current TE7, if any, headed by permission sought
+  (**Application to file out of time** or **Application for extension of time**), and the current PE2,
+  if any (**Application to file out of time**), again with **Form validation result** at the top, then
+  form, PCN/VRN, respondent details, permission sought, reasons given, signed and dated,
   signed by, and related fields. Form validation is changed only via **Validate OOT application**, not
   the form-specific edit events. When one or more warrant authorisations exist, a **Warrant
   authorisations** section at the bottom lists each entry's date of issue, date of expiry, and status
@@ -249,21 +262,21 @@ SDK does not prepend it):
 - **Linked Cases**: ExUI `ComponentLauncher` + `caseLinks` collection (`#ARGUMENT(LinkedCases)`).
   Batch links are owned by the batch case (see below); a PCN can appear under ExUI **linked from**
   for more than one batch (e.g. registration and warrant auth) after each batch's `linkPcnCases`
-  updates CCD's `case_link` table. Case details **Batch case** (`batchCase` /
-  `batch_case_reference`) remains the registration batch only.
+  updates CCD's `case_link` table. Case details **Batch case** is the current registration's batch
+  (`tec_case_registration.batch_case_reference`).
 - **Payment History**: CCD tab hosting the shared `CasePaymentHistoryViewer` field (ccpay case
   transactions UI). Local content depends on Payments being wired for TEC.
 - **Previous registrations**: stub tab immediately after Payment History. `TecCaseView` supplies
   placeholder HTML in `previousRegistrationsMarkdown`. No registration history is loaded yet.
 
-Search and work-basket inputs are penalty charge number and local authority (CCD `FixedList` of the 2023
+Search and work-basket inputs are PCN stem (filter label **Penalty charge number stem**, column **PCN stem**) and local authority (CCD `FixedList` of the 2023
 England councils — ExUI has no generic autosuggest for this control). **Search** results include the case
-reference, **State**, penalty charge number, local authority, respondent lines 1–3 and vehicle registration
-number. Work-basket (Case list) result columns are case reference, penalty charge number, local authority,
+reference, **State**, **PCN stem**, local authority, respondent lines 1–3 and vehicle registration
+number. Work-basket (Case list) result columns are case reference, **PCN stem**, local authority,
 respondent line 1, vehicle registration number, and **State** (far right).
 
-The tab configuration is static CCD metadata. `TecCaseView` supplies the current values at runtime by loading the row
-whose `case_reference` matches the CCD reference. ExUI and API clients call CCD; they do not call `TecCaseView`
+The tab configuration is static CCD metadata. `TecCaseView` supplies the current values at runtime by loading the case
+row and the current registration and form rows. ExUI and API clients call CCD; they do not call `TecCaseView`
 directly.
 
 ### Prototype Tasks and Roles and access tabs
@@ -286,7 +299,7 @@ HTML from `TecCaseView`. It does not call role-assignment or allocate-access API
 
 When a case is in `CASE_ISSUED`, the tab shows a mix of unassigned, assigned-to-you and assigned-to-someone-else cards
 so Manage and Next steps layouts can be compared. In `AWAITING_OOT_VALIDATION`, the assigned task's Next steps
-include the form edits that match the case (TE9 and TE7, or PE3 and PE2) and **Validate OOT application**.
+include the form edits for each form on the case and **Validate OOT application**.
 
 Case-scoped Tasks HTML is not the place for Upload batch file. That belongs in ExUI primary
 navigation via `menuConfigs` — see [exui-manage-batches-plan](/exui-manage-batches-plan.html) and
@@ -314,7 +327,7 @@ navigation via `menuConfigs` — see [exui-manage-batches-plan](/exui-manage-bat
 runtime (status label, processed-PCN display, conditional fees). Inputs and Outputs documents appear
 on the **Case File View** tab (`allDocuments` from `tec_batch_document`). The **Linked Cases** tab
 uses ExUI's Linked Cases component (`caseLinks` collection); `BatchCaseView` rebuilds it from PCN
-membership for this batch — registration via `tec_case.batch_case_reference`, other types via
+membership for this batch — registration via `tec_case_registration.batch_case_reference`, other types via
 `tec_batch_pcn_link` (unioned in `findLinkedPcnCaseReferences`). Reasons use LOV code `CLRC007` (Other) with
 `OtherDescription` **Linked as part of a batch of registrations** for registration batches (ExUI shows
 `Other - …`; other batch types use matching “Linked as part of a batch of …” copy — see
@@ -437,7 +450,7 @@ sequenceDiagram
     CCD->>CCD: Validate access, event and fields
     CCD->>R: Delegate case creation
     R->>R: Invoke TecCaseConfiguration handler
-    R->>DB: Insert public.tec_case
+    R->>DB: Insert public.tec_case and tec_case_registration
     R->>DB: Persist local CCD lifecycle data
     R->>R: Invoke TecCaseView
     R-->>CCD: State and projected case data
@@ -461,7 +474,7 @@ sequenceDiagram
     C->>CCD: Read TEC case
     CCD->>R: Read decentralised case
     R->>V: getCase(case reference, state)
-    V->>DB: Select public.tec_case
+    V->>DB: Select tec_case and current registration and form rows
     DB-->>V: TEC business row
     V-->>R: TecCase projection
     R-->>CCD: CCD-shaped case data
@@ -512,7 +525,7 @@ CFTLib itself is not deployed.
 | --- | --- |
 | Case type, fields, states, events, tabs, categories and permissions | `TecCaseConfiguration`, `BatchCaseConfiguration`, `ExceptionCaseConfiguration`, states, `UserRole`, categories and case models |
 | Definition used by the local CCD stack | Generated `build/ccd-definition/TEC`, `TEC_BATCH` and `TEC_EXCEPTION` imported by `TecCftLibConfiguration` |
-| PCN business data | `tec.public.tec_case` |
+| PCN business data | `tec.public.tec_case` plus `tec_case_registration`, `tec_case_te9`, `tec_case_te7`, `tec_case_pe3`, `tec_case_pe2` |
 | Batch business data | `tec.public.tec_batch` / `tec.public.tec_batch_document` |
 | Exception business data | `tec.public.tec_exception_case` |
 | Case File View documents (PCN) | `tec.public.tec_case_document` |

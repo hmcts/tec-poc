@@ -143,7 +143,7 @@ public class BatchCase {
     /**
      * Standard CCD Linked Cases collection. Field id must remain {@code caseLinks}.
      * Populated by {@link BatchCaseView} from registration FK
-     * ({@code tec_case.batch_case_reference}) and/or {@code tec_batch_pcn_link}.
+     * ({@code tec_case_registration.batch_case_reference}) and/or {@code tec_batch_pcn_link}.
      */
     @CCD(
         label = "Linked cases",

@@ -19,7 +19,7 @@ public record CreateTecCaseRequest(
     @Pattern(regexp = "^R[A-Z]{2,3}[0-9]{6}$")
     String batchIdentifier,
     @NotBlank
-    @Pattern(regexp = "^[A-Z]{2,3}[0-9]{7}[0-9A][0-9]$")
+    @Pattern(regexp = "^[A-Z]{2,3}[0-9]{7}[0-9A]0$")
     String penaltyChargeNumber,
     @NotNull LocalAuthority localAuthority,
     @NotBlank @Size(max = 30) @Pattern(regexp = "^\\P{Ll}*$") String respondentDetails1,
@@ -42,6 +42,9 @@ public record CreateTecCaseRequest(
         tecCase.setFileIdentifier(fileIdentifier);
         tecCase.setBatchIdentifier(batchIdentifier);
         tecCase.setPenaltyChargeNumber(penaltyChargeNumber);
+        if (penaltyChargeNumber != null && penaltyChargeNumber.matches("^[A-Z]{2,3}[0-9]{7}[0-9A]0$")) {
+            tecCase.setPcnStem(penaltyChargeNumber.substring(0, penaltyChargeNumber.length() - 1));
+        }
         tecCase.setLocalAuthority(localAuthority);
         if (localAuthority != null) {
             tecCase.setCaseAccessCategory(localAuthority.getCode());
@@ -65,7 +68,7 @@ public record CreateTecCaseRequest(
         if (fileIdentifier == null || batchIdentifier == null || penaltyChargeNumber == null
             || !fileIdentifier.matches("^R[A-Z]{2,3}[0-9]{5}$")
             || !batchIdentifier.matches("^R[A-Z]{2,3}[0-9]{6}$")
-            || !penaltyChargeNumber.matches("^[A-Z]{2,3}[0-9]{7}[0-9A][0-9]$")) {
+            || !penaltyChargeNumber.matches("^[A-Z]{2,3}[0-9]{7}[0-9A]0$")) {
             return true;
         }
 

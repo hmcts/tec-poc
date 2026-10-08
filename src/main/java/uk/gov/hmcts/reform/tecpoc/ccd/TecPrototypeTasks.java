@@ -136,16 +136,16 @@ final class TecPrototypeTasks {
             return List.of();
         }
         List<NextStep> steps = new ArrayList<>();
-        if (tecCase.getApplicationForm() == ApplicationForm.TE9) {
+        if (tecCase.getTe9Details() != null) {
             steps.add(new NextStep("Edit TE9 application", "editTe9Application"));
         }
-        if (tecCase.getApplicationForm() == ApplicationForm.PE3) {
+        if (tecCase.getPe3Details() != null) {
             steps.add(new NextStep("Edit PE3 application", "editPe3Application"));
         }
-        if (tecCase.getTimeExtensionForm() == TimeExtensionForm.TE7) {
+        if (tecCase.getTe7Details() != null) {
             steps.add(new NextStep("Edit TE7 application", "editTe7Application"));
         }
-        if (tecCase.getTimeExtensionForm() == TimeExtensionForm.PE2) {
+        if (tecCase.getPe2Details() != null) {
             steps.add(new NextStep("Edit PE2 application", "editPe2Application"));
         }
         return steps;

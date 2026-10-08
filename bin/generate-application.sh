@@ -156,7 +156,12 @@ trap cleanup EXIT
 
 CASE_JSON_PATH="${WORKDIR}/case.json"
 PAYLOAD_PATH="${WORKDIR}/payload.json"
-PDF_BASENAME="${SECTION_LABEL}.pdf"
+registration_pcn="$(jq --raw-output '.data.penaltyChargeNumber // empty' <<<"${case_response}")"
+if [[ -z "${registration_pcn}" ]]; then
+  echo "Case ${CASE_REFERENCE} has no registration penalty charge number" >&2
+  exit 1
+fi
+PDF_BASENAME="${SECTION_LABEL} - ${registration_pcn}.pdf"
 PDF_PATH="${WORKDIR}/${PDF_BASENAME}"
 
 printf '%s\n' "${case_response}" >"${CASE_JSON_PATH}"

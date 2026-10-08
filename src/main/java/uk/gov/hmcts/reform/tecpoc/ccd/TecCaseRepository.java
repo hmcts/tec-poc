@@ -12,113 +12,103 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import uk.gov.hmcts.ccd.sdk.type.CaseLink;
 
 @Repository
 @RequiredArgsConstructor
 public class TecCaseRepository {
 
+    /**
+     * Highest PCN suffix, then the latest row. Shared by Case details and edit events.
+     */
+    private static final String CURRENT_RECORD_ORDER =
+        "right(penalty_charge_number, 1)::int desc, created_at desc, id desc";
+
     private final NamedParameterJdbcTemplate database;
 
+    @Transactional
     public void create(long caseReference, TecCase tecCase) {
+        PcnNumbers.requireInitialRegistration(tecCase.getPenaltyChargeNumber());
+        tecCase.setPcnStem(PcnNumbers.stem(tecCase.getPenaltyChargeNumber()));
         database.update("""
             insert into tec_case (
-                case_reference, file_identifier, batch_identifier, penalty_charge_number,
-                local_authority,
+                case_reference, pcn_stem, local_authority,
                 respondent_details_1, respondent_details_2, respondent_details_3,
-                respondent_details_4, respondent_details_5, respondent_details_6,
-                vehicle_registration_number, nature_of_offence,
-                date_charge_certificate_served, amount_due
+                vehicle_registration_number
             ) values (
-                :caseReference, :fileIdentifier, :batchIdentifier, :penaltyChargeNumber,
-                :localAuthority,
+                :caseReference, :pcnStem, :localAuthority,
                 :respondentDetails1, :respondentDetails2, :respondentDetails3,
-                :respondentDetails4, :respondentDetails5, :respondentDetails6,
-                :vehicleRegistrationNumber, :natureOfOffence,
-                :dateChargeCertificateServed, :amountDue
+                :vehicleRegistrationNumber
             )
-            """, parameters(caseReference, tecCase));
+            """, caseParameters(caseReference, tecCase));
+        insertRegistrationRow(caseReference, tecCase);
     }
 
     public TecCase find(long caseReference) {
-        return database.queryForObject("""
-            select file_identifier, batch_identifier, batch_case_reference,
-                   penalty_charge_number,
-                   local_authority,
+        TecCase result = database.queryForObject("""
+            select pcn_stem, local_authority,
                    respondent_details_1, respondent_details_2, respondent_details_3,
-                   respondent_details_4, respondent_details_5, respondent_details_6,
-                   vehicle_registration_number, nature_of_offence,
-                   date_charge_certificate_served, amount_due, payment_status,
-                   payment_reference, closure_reason, registration_document, registration_date,
-                   form_validation_result,
-                   application_date_received, application_type, application_te7_submitted,
-                   application_form, application_penalty_charge_number,
-                   application_vehicle_registration, application_applicant,
-                   application_location_of_contravention, application_date_of_contravention,
-                   application_title, application_full_name, application_company_name,
-                   application_address, application_postcode, application_declaration,
-                   application_reasons_given, application_date_paid, application_how_paid,
-                   application_paid_to,
-                   time_extension_form, time_extension_penalty_charge_number,
-                   time_extension_vehicle_registration, time_extension_applicant,
-                   time_extension_location_of_contravention, time_extension_date_of_contravention,
-                   time_extension_title, time_extension_other_title, time_extension_full_name,
-                   time_extension_company_name, time_extension_address, time_extension_postcode,
-                   time_extension_permission_type, time_extension_reasons_given,
-                   time_extension_signed_and_dated,
-                   time_extension_signed_by, time_extension_date_signed,
-                   time_extension_print_full_name
+                   vehicle_registration_number, form_validation_result
               from tec_case
              where case_reference = :caseReference
             """, Map.of("caseReference", caseReference), (resultSet, rowNumber) -> {
-                TecCase result = new TecCase();
-                result.setFileIdentifier(resultSet.getString("file_identifier"));
-                result.setBatchIdentifier(resultSet.getString("batch_identifier"));
-                long batchCaseReference = resultSet.getLong("batch_case_reference");
-                if (!resultSet.wasNull()) {
-                    result.setBatchCase(CaseLink.builder()
-                        .caseReference(Long.toString(batchCaseReference))
-                        .caseType(BatchCaseConfiguration.CASE_TYPE)
-                        .build());
-                }
-                result.setPenaltyChargeNumber(resultSet.getString("penalty_charge_number"));
-                result.setLocalAuthority(LocalAuthority.valueOf(resultSet.getString("local_authority")));
-                result.setRespondentDetails1(resultSet.getString("respondent_details_1"));
-                result.setRespondentDetails2(resultSet.getString("respondent_details_2"));
-                result.setRespondentDetails3(resultSet.getString("respondent_details_3"));
-                result.setRespondentDetails4(resultSet.getString("respondent_details_4"));
-                result.setRespondentDetails5(resultSet.getString("respondent_details_5"));
-                result.setRespondentDetails6(resultSet.getString("respondent_details_6"));
-                result.setVehicleRegistrationNumber(resultSet.getString("vehicle_registration_number"));
-                result.setNatureOfOffence(resultSet.getString("nature_of_offence"));
-                result.setDateChargeCertificateServed(resultSet.getString("date_charge_certificate_served"));
-                result.setAmountDue(resultSet.getInt("amount_due"));
-                result.setPaymentStatus(resultSet.getString("payment_status"));
-                result.setPaymentReference(resultSet.getString("payment_reference"));
-                result.setClosureReason(resultSet.getString("closure_reason"));
-                result.setRegistrationDocument(resultSet.getString("registration_document"));
-                Date registrationDate = resultSet.getDate("registration_date");
-                if (registrationDate != null) {
-                    result.setRegistrationDate(registrationDate.toLocalDate());
-                }
+                TecCase loaded = new TecCase();
+                loaded.setPcnStem(resultSet.getString("pcn_stem"));
+                loaded.setLocalAuthority(LocalAuthority.valueOf(resultSet.getString("local_authority")));
+                loaded.setRespondentDetails1(resultSet.getString("respondent_details_1"));
+                loaded.setRespondentDetails2(resultSet.getString("respondent_details_2"));
+                loaded.setRespondentDetails3(resultSet.getString("respondent_details_3"));
+                loaded.setVehicleRegistrationNumber(resultSet.getString("vehicle_registration_number"));
                 String formValidationResult = resultSet.getString("form_validation_result");
                 if (formValidationResult != null) {
-                    result.setFormValidationResult(FormValidationResult.valueOf(formValidationResult));
+                    loaded.setFormValidationResult(FormValidationResult.valueOf(formValidationResult));
                 }
-                mapApplicationFields(resultSet, result);
-                mapTimeExtensionFields(resultSet, result);
-                return result;
+                return loaded;
             });
+        applyCurrentRegistration(result, caseReference);
+        result.setTe9Details(findCurrentTe9(caseReference));
+        result.setPe3Details(findCurrentPe3(caseReference));
+        result.setTe7Details(findCurrentTe7(caseReference));
+        result.setPe2Details(findCurrentPe2(caseReference));
+        return result;
+    }
+
+    /**
+     * Full PCN of the registration with the highest suffix.
+     */
+    public String currentRegistrationPcn(long caseReference) {
+        List<String> pcns = database.query("""
+            select penalty_charge_number
+              from tec_case_registration
+             where case_reference = :caseReference
+             order by %s
+             limit 1
+            """.formatted(CURRENT_RECORD_ORDER), Map.of("caseReference", caseReference),
+            (resultSet, rowNumber) -> resultSet.getString("penalty_charge_number"));
+        if (pcns.isEmpty()) {
+            throw new IllegalArgumentException("No registration record on case " + caseReference);
+        }
+        return pcns.get(0);
     }
 
     public void linkBatchCase(long caseReference, long batchCaseReference) {
-        database.update("""
-            update tec_case
+        int updated = database.update("""
+            update tec_case_registration
                set batch_case_reference = :batchCaseReference
-             where case_reference = :caseReference
-            """, new MapSqlParameterSource()
+             where id = (
+                select id
+                  from tec_case_registration
+                 where case_reference = :caseReference
+                 order by %s
+                 limit 1
+             )
+            """.formatted(CURRENT_RECORD_ORDER), new MapSqlParameterSource()
             .addValue("caseReference", caseReference)
             .addValue("batchCaseReference", batchCaseReference));
+        if (updated == 0) {
+            throw new IllegalArgumentException("No registration record on case " + caseReference);
+        }
     }
 
     public boolean exists(long caseReference) {
@@ -134,139 +124,101 @@ public class TecCaseRepository {
         return count != null && count > 0;
     }
 
+    /**
+     * Batch linked to the current registration, or null when that registration has no batch yet.
+     */
     public Long findBatchCaseReference(long caseReference) {
-        try {
-            return database.queryForObject("""
-                select batch_case_reference
-                  from tec_case
-                 where case_reference = :caseReference
-                """, Map.of("caseReference", caseReference), Long.class);
-        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+        List<Long> batches = database.query("""
+            select batch_case_reference
+              from tec_case_registration
+             where case_reference = :caseReference
+             order by %s
+             limit 1
+            """.formatted(CURRENT_RECORD_ORDER), Map.of("caseReference", caseReference),
+            (resultSet, rowNumber) -> {
+                long batchCaseReference = resultSet.getLong("batch_case_reference");
+                return resultSet.wasNull() ? null : batchCaseReference;
+            });
+        if (batches.isEmpty()) {
             return null;
         }
+        return batches.get(0);
     }
 
     public void recordApplication(long caseReference, TecCase tecCase) {
-        database.update("""
-            update tec_case
-               set application_date_received = :applicationDateReceived,
-                   application_type = :applicationType,
-                   application_te7_submitted = :applicationTe7Submitted,
-                   application_form = :applicationForm,
-                   application_penalty_charge_number = :applicationPenaltyChargeNumber,
-                   application_vehicle_registration = :applicationVehicleRegistration,
-                   application_applicant = :applicationApplicant,
-                   application_location_of_contravention = :applicationLocationOfContravention,
-                   application_date_of_contravention = :applicationDateOfContravention,
-                   application_title = :applicationTitle,
-                   application_full_name = :applicationFullName,
-                   application_company_name = :applicationCompanyName,
-                   application_address = :applicationAddress,
-                   application_postcode = :applicationPostcode,
-                   application_declaration = :applicationDeclaration,
-                   application_reasons_given = :applicationReasonsGiven,
-                   application_date_paid = :applicationDatePaid,
-                   application_how_paid = :applicationHowPaid,
-                   application_paid_to = :applicationPaidTo
-             where case_reference = :caseReference
-            """, new MapSqlParameterSource()
-            .addValue("caseReference", caseReference)
-            .addValue("applicationDateReceived", tecCase.getApplicationDateReceived())
-            .addValue(
-                "applicationType",
-                tecCase.getApplicationType() == null ? null : tecCase.getApplicationType().name()
-            )
-            .addValue(
-                "applicationTe7Submitted",
-                tecCase.getApplicationTe7Submitted() == null
-                    ? null
-                    : tecCase.getApplicationTe7Submitted().name()
-            )
-            .addValue(
-                "applicationForm",
-                tecCase.getApplicationForm() == null ? null : tecCase.getApplicationForm().name()
-            )
-            .addValue("applicationPenaltyChargeNumber", tecCase.getApplicationPenaltyChargeNumber())
-            .addValue("applicationVehicleRegistration", tecCase.getApplicationVehicleRegistration())
-            .addValue("applicationApplicant", tecCase.getApplicationApplicant())
-            .addValue(
-                "applicationLocationOfContravention",
-                tecCase.getApplicationLocationOfContravention()
-            )
-            .addValue("applicationDateOfContravention", tecCase.getApplicationDateOfContravention())
-            .addValue("applicationTitle", tecCase.getApplicationTitle())
-            .addValue("applicationFullName", tecCase.getApplicationFullName())
-            .addValue("applicationCompanyName", tecCase.getApplicationCompanyName())
-            .addValue("applicationAddress", tecCase.getApplicationAddress())
-            .addValue("applicationPostcode", tecCase.getApplicationPostcode())
-            .addValue(
-                "applicationDeclaration",
-                tecCase.getApplicationDeclaration() == null
-                    ? null
-                    : tecCase.getApplicationDeclaration().name()
-            )
-            .addValue(
-                "applicationReasonsGiven",
-                tecCase.getApplicationReasonsGiven() == null
-                    ? null
-                    : tecCase.getApplicationReasonsGiven().name()
-            )
-            .addValue("applicationDatePaid", tecCase.getApplicationDatePaid())
-            .addValue("applicationHowPaid", tecCase.getApplicationHowPaid())
-            .addValue("applicationPaidTo", tecCase.getApplicationPaidTo()));
+        requireFormPcn(caseReference, tecCase.getApplicationPenaltyChargeNumber());
+        if (tecCase.getApplicationForm() == ApplicationForm.TE9) {
+            insertTe9(caseReference, tecCase);
+            return;
+        }
+        if (tecCase.getApplicationForm() == ApplicationForm.PE3) {
+            insertPe3(caseReference, tecCase);
+            return;
+        }
+        throw new IllegalArgumentException("applicationForm must be TE9 or PE3");
     }
 
     /**
      * Clerk edit of TE9 fields. Does not change form type or penalty charge number.
      */
     public void editTe9Application(long caseReference, TecCase tecCase) {
-        database.update("""
-            update tec_case
-               set application_date_received = :applicationDateReceived,
-                   application_type = :applicationType,
-                   application_te7_submitted = :applicationTe7Submitted,
-                   application_vehicle_registration = :applicationVehicleRegistration,
-                   application_applicant = :applicationApplicant,
-                   application_location_of_contravention = :applicationLocationOfContravention,
-                   application_date_of_contravention = :applicationDateOfContravention,
-                   application_title = :applicationTitle,
-                   application_full_name = :applicationFullName,
-                   application_company_name = :applicationCompanyName,
-                   application_address = :applicationAddress,
-                   application_postcode = :applicationPostcode,
-                   application_declaration = :applicationDeclaration,
-                   application_date_paid = :applicationDatePaid,
-                   application_how_paid = :applicationHowPaid,
-                   application_paid_to = :applicationPaidTo
-             where case_reference = :caseReference
-            """, applicationEditParams(caseReference, tecCase));
+        updateCurrent("""
+            update tec_case_te9
+               set date_received = :applicationDateReceived,
+                   type = :applicationType,
+                   te7_submitted = :applicationTe7Submitted,
+                   vehicle_registration = :applicationVehicleRegistration,
+                   applicant = :applicationApplicant,
+                   location_of_contravention = :applicationLocationOfContravention,
+                   date_of_contravention = :applicationDateOfContravention,
+                   title = :applicationTitle,
+                   full_name = :applicationFullName,
+                   company_name = :applicationCompanyName,
+                   address = :applicationAddress,
+                   postcode = :applicationPostcode,
+                   declaration = :applicationDeclaration,
+                   date_paid = :applicationDatePaid,
+                   how_paid = :applicationHowPaid,
+                   paid_to = :applicationPaidTo
+             where id = (
+                select id from tec_case_te9
+                 where case_reference = :caseReference
+                 order by %s
+                 limit 1
+             )
+            """, "No TE9 record on case " + caseReference, applicationEditParams(caseReference, tecCase));
     }
 
     /**
      * Clerk edit of PE3 fields. Does not change form type or penalty charge number.
      */
     public void editPe3Application(long caseReference, TecCase tecCase) {
-        database.update("""
-            update tec_case
-               set application_date_received = :applicationDateReceived,
-                   application_type = :applicationType,
-                   application_te7_submitted = :applicationTe7Submitted,
-                   application_vehicle_registration = :applicationVehicleRegistration,
-                   application_applicant = :applicationApplicant,
-                   application_location_of_contravention = :applicationLocationOfContravention,
-                   application_date_of_contravention = :applicationDateOfContravention,
-                   application_title = :applicationTitle,
-                   application_full_name = :applicationFullName,
-                   application_company_name = :applicationCompanyName,
-                   application_address = :applicationAddress,
-                   application_postcode = :applicationPostcode,
-                   application_declaration = :applicationDeclaration,
-                   application_reasons_given = :applicationReasonsGiven,
-                   application_date_paid = :applicationDatePaid,
-                   application_how_paid = :applicationHowPaid,
-                   application_paid_to = :applicationPaidTo
-             where case_reference = :caseReference
-            """, applicationEditParams(caseReference, tecCase)
+        updateCurrent("""
+            update tec_case_pe3
+               set date_received = :applicationDateReceived,
+                   type = :applicationType,
+                   te7_submitted = :applicationTe7Submitted,
+                   vehicle_registration = :applicationVehicleRegistration,
+                   applicant = :applicationApplicant,
+                   location_of_contravention = :applicationLocationOfContravention,
+                   date_of_contravention = :applicationDateOfContravention,
+                   title = :applicationTitle,
+                   full_name = :applicationFullName,
+                   company_name = :applicationCompanyName,
+                   address = :applicationAddress,
+                   postcode = :applicationPostcode,
+                   declaration = :applicationDeclaration,
+                   reasons_given = :applicationReasonsGiven,
+                   date_paid = :applicationDatePaid,
+                   how_paid = :applicationHowPaid,
+                   paid_to = :applicationPaidTo
+             where id = (
+                select id from tec_case_pe3
+                 where case_reference = :caseReference
+                 order by %s
+                 limit 1
+             )
+            """, "No PE3 record on case " + caseReference, applicationEditParams(caseReference, tecCase)
             .addValue(
                 "applicationReasonsGiven",
                 tecCase.getApplicationReasonsGiven() == null
@@ -315,25 +267,7 @@ public class TecCaseRepository {
     public void recordTimeExtension(long caseReference, TecCase tecCase) {
         database.update("""
             update tec_case
-               set form_validation_result = coalesce(:formValidationResult, form_validation_result),
-                   time_extension_form = :timeExtensionForm,
-                   time_extension_penalty_charge_number = :timeExtensionPenaltyChargeNumber,
-                   time_extension_vehicle_registration = :timeExtensionVehicleRegistration,
-                   time_extension_applicant = :timeExtensionApplicant,
-                   time_extension_location_of_contravention = :timeExtensionLocationOfContravention,
-                   time_extension_date_of_contravention = :timeExtensionDateOfContravention,
-                   time_extension_title = :timeExtensionTitle,
-                   time_extension_other_title = :timeExtensionOtherTitle,
-                   time_extension_full_name = :timeExtensionFullName,
-                   time_extension_company_name = :timeExtensionCompanyName,
-                   time_extension_address = :timeExtensionAddress,
-                   time_extension_postcode = :timeExtensionPostcode,
-                   time_extension_permission_type = :timeExtensionPermissionType,
-                   time_extension_reasons_given = :timeExtensionReasonsGiven,
-                   time_extension_signed_and_dated = :timeExtensionSignedAndDated,
-                   time_extension_signed_by = :timeExtensionSignedBy,
-                   time_extension_date_signed = :timeExtensionDateSigned,
-                   time_extension_print_full_name = :timeExtensionPrintFullName
+               set form_validation_result = coalesce(:formValidationResult, form_validation_result)
              where case_reference = :caseReference
             """, new MapSqlParameterSource()
             .addValue("caseReference", caseReference)
@@ -342,74 +276,45 @@ public class TecCaseRepository {
                 tecCase.getFormValidationResult() == null
                     ? null
                     : tecCase.getFormValidationResult().name()
-            )
-            .addValue(
-                "timeExtensionForm",
-                tecCase.getTimeExtensionForm() == null ? null : tecCase.getTimeExtensionForm().name()
-            )
-            .addValue("timeExtensionPenaltyChargeNumber", tecCase.getTimeExtensionPenaltyChargeNumber())
-            .addValue("timeExtensionVehicleRegistration", tecCase.getTimeExtensionVehicleRegistration())
-            .addValue("timeExtensionApplicant", tecCase.getTimeExtensionApplicant())
-            .addValue(
-                "timeExtensionLocationOfContravention",
-                tecCase.getTimeExtensionLocationOfContravention()
-            )
-            .addValue("timeExtensionDateOfContravention", tecCase.getTimeExtensionDateOfContravention())
-            .addValue("timeExtensionTitle", tecCase.getTimeExtensionTitle())
-            .addValue("timeExtensionOtherTitle", tecCase.getTimeExtensionOtherTitle())
-            .addValue("timeExtensionFullName", tecCase.getTimeExtensionFullName())
-            .addValue("timeExtensionCompanyName", tecCase.getTimeExtensionCompanyName())
-            .addValue("timeExtensionAddress", tecCase.getTimeExtensionAddress())
-            .addValue("timeExtensionPostcode", tecCase.getTimeExtensionPostcode())
-            .addValue(
-                "timeExtensionPermissionType",
-                tecCase.getTimeExtensionPermissionType() == null
-                    ? null
-                    : tecCase.getTimeExtensionPermissionType().name()
-            )
-            .addValue(
-                "timeExtensionReasonsGiven",
-                tecCase.getTimeExtensionReasonsGiven() == null
-                    ? null
-                    : tecCase.getTimeExtensionReasonsGiven().name()
-            )
-            .addValue(
-                "timeExtensionSignedAndDated",
-                tecCase.getTimeExtensionSignedAndDated() == null
-                    ? null
-                    : tecCase.getTimeExtensionSignedAndDated().name()
-            )
-            .addValue(
-                "timeExtensionSignedBy",
-                tecCase.getTimeExtensionSignedBy() == null
-                    ? null
-                    : tecCase.getTimeExtensionSignedBy().name()
-            )
-            .addValue("timeExtensionDateSigned", tecCase.getTimeExtensionDateSigned())
-            .addValue("timeExtensionPrintFullName", tecCase.getTimeExtensionPrintFullName()));
+            ));
+        requireFormPcn(caseReference, tecCase.getTimeExtensionPenaltyChargeNumber());
+        if (tecCase.getTimeExtensionForm() == TimeExtensionForm.TE7) {
+            insertTe7(caseReference, tecCase);
+            return;
+        }
+        if (tecCase.getTimeExtensionForm() == TimeExtensionForm.PE2) {
+            insertPe2(caseReference, tecCase);
+            return;
+        }
+        throw new IllegalArgumentException("timeExtensionForm must be TE7 or PE2");
     }
 
     /**
      * Clerk edit of TE7 fields. Does not change form type or penalty charge number.
      */
     public void editTe7Application(long caseReference, TecCase tecCase) {
-        database.update("""
-            update tec_case
-               set time_extension_vehicle_registration = :timeExtensionVehicleRegistration,
-                   time_extension_title = :timeExtensionTitle,
-                   time_extension_other_title = :timeExtensionOtherTitle,
-                   time_extension_full_name = :timeExtensionFullName,
-                   time_extension_company_name = :timeExtensionCompanyName,
-                   time_extension_address = :timeExtensionAddress,
-                   time_extension_postcode = :timeExtensionPostcode,
-                   time_extension_permission_type = :timeExtensionPermissionType,
-                   time_extension_reasons_given = :timeExtensionReasonsGiven,
-                   time_extension_signed_and_dated = :timeExtensionSignedAndDated,
-                   time_extension_signed_by = :timeExtensionSignedBy,
-                   time_extension_date_signed = :timeExtensionDateSigned,
-                   time_extension_print_full_name = :timeExtensionPrintFullName
-             where case_reference = :caseReference
-            """, new MapSqlParameterSource()
+        updateCurrent("""
+            update tec_case_te7
+               set vehicle_registration = :timeExtensionVehicleRegistration,
+                   title = :timeExtensionTitle,
+                   other_title = :timeExtensionOtherTitle,
+                   full_name = :timeExtensionFullName,
+                   company_name = :timeExtensionCompanyName,
+                   address = :timeExtensionAddress,
+                   postcode = :timeExtensionPostcode,
+                   permission_type = :timeExtensionPermissionType,
+                   reasons_given = :timeExtensionReasonsGiven,
+                   signed_and_dated = :timeExtensionSignedAndDated,
+                   signed_by = :timeExtensionSignedBy,
+                   date_signed = :timeExtensionDateSigned,
+                   print_full_name = :timeExtensionPrintFullName
+             where id = (
+                select id from tec_case_te7
+                 where case_reference = :caseReference
+                 order by %s
+                 limit 1
+             )
+            """, "No TE7 record on case " + caseReference, new MapSqlParameterSource()
             .addValue("caseReference", caseReference)
             .addValue("timeExtensionVehicleRegistration", tecCase.getTimeExtensionVehicleRegistration())
             .addValue("timeExtensionTitle", tecCase.getTimeExtensionTitle())
@@ -450,20 +355,25 @@ public class TecCaseRepository {
      * Clerk edit of PE2 fields. Does not change form type or penalty charge number.
      */
     public void editPe2Application(long caseReference, TecCase tecCase) {
-        database.update("""
-            update tec_case
-               set time_extension_vehicle_registration = :timeExtensionVehicleRegistration,
-                   time_extension_applicant = :timeExtensionApplicant,
-                   time_extension_location_of_contravention = :timeExtensionLocationOfContravention,
-                   time_extension_date_of_contravention = :timeExtensionDateOfContravention,
-                   time_extension_full_name = :timeExtensionFullName,
-                   time_extension_address = :timeExtensionAddress,
-                   time_extension_postcode = :timeExtensionPostcode,
-                   time_extension_reasons_given = :timeExtensionReasonsGiven,
-                   time_extension_signed_and_dated = :timeExtensionSignedAndDated,
-                   time_extension_date_signed = :timeExtensionDateSigned
-             where case_reference = :caseReference
-            """, new MapSqlParameterSource()
+        updateCurrent("""
+            update tec_case_pe2
+               set vehicle_registration = :timeExtensionVehicleRegistration,
+                   applicant = :timeExtensionApplicant,
+                   location_of_contravention = :timeExtensionLocationOfContravention,
+                   date_of_contravention = :timeExtensionDateOfContravention,
+                   full_name = :timeExtensionFullName,
+                   address = :timeExtensionAddress,
+                   postcode = :timeExtensionPostcode,
+                   reasons_given = :timeExtensionReasonsGiven,
+                   signed_and_dated = :timeExtensionSignedAndDated,
+                   date_signed = :timeExtensionDateSigned
+             where id = (
+                select id from tec_case_pe2
+                 where case_reference = :caseReference
+                 order by %s
+                 limit 1
+             )
+            """, "No PE2 record on case " + caseReference, new MapSqlParameterSource()
             .addValue("caseReference", caseReference)
             .addValue("timeExtensionVehicleRegistration", tecCase.getTimeExtensionVehicleRegistration())
             .addValue("timeExtensionApplicant", tecCase.getTimeExtensionApplicant())
@@ -491,13 +401,18 @@ public class TecCaseRepository {
     }
 
     public void recordPayment(long caseReference, String status, String reference, String closureReason) {
-        database.update("""
-            update tec_case
+        updateCurrent("""
+            update tec_case_registration
                set payment_status = :status,
                    payment_reference = :reference,
                    closure_reason = :closureReason
-             where case_reference = :caseReference
-            """, new MapSqlParameterSource()
+             where id = (
+                select id from tec_case_registration
+                 where case_reference = :caseReference
+                 order by %s
+                 limit 1
+             )
+            """, "No registration record on case " + caseReference, new MapSqlParameterSource()
             .addValue("caseReference", caseReference)
             .addValue("status", status)
             .addValue("reference", reference)
@@ -505,12 +420,17 @@ public class TecCaseRepository {
     }
 
     public void recordRegistration(long caseReference, String document, LocalDate registrationDate) {
-        database.update("""
-            update tec_case
+        updateCurrent("""
+            update tec_case_registration
                set registration_document = :document,
                    registration_date = :registrationDate
-             where case_reference = :caseReference
-            """, new MapSqlParameterSource()
+             where id = (
+                select id from tec_case_registration
+                 where case_reference = :caseReference
+                 order by %s
+                 limit 1
+             )
+            """, "No registration record on case " + caseReference, new MapSqlParameterSource()
             .addValue("caseReference", caseReference)
             .addValue("document", document)
             .addValue("registrationDate", registrationDate));
@@ -675,7 +595,49 @@ public class TecCaseRepository {
         return value == null ? null : YesNo.valueOf(value);
     }
 
-    private MapSqlParameterSource parameters(long caseReference, TecCase tecCase) {
+    private MapSqlParameterSource caseParameters(long caseReference, TecCase tecCase) {
+        return new MapSqlParameterSource()
+            .addValue("caseReference", caseReference)
+            .addValue("pcnStem", tecCase.getPcnStem())
+            .addValue(
+                "localAuthority",
+                tecCase.getLocalAuthority() == null ? null : tecCase.getLocalAuthority().name()
+            )
+            .addValue("respondentDetails1", tecCase.getRespondentDetails1())
+            .addValue("respondentDetails2", tecCase.getRespondentDetails2())
+            .addValue("respondentDetails3", tecCase.getRespondentDetails3())
+            .addValue("vehicleRegistrationNumber", tecCase.getVehicleRegistrationNumber());
+    }
+
+    /**
+     * Adds a registration without changing the case-level list fields.
+     * The caller supplies the next PCN suffix.
+     */
+    public void insertRegistration(long caseReference, TecCase tecCase) {
+        insertRegistrationRow(caseReference, tecCase);
+    }
+
+    private void insertRegistrationRow(long caseReference, TecCase tecCase) {
+        database.update("""
+            insert into tec_case_registration (
+                case_reference, file_identifier, batch_identifier, penalty_charge_number,
+                local_authority,
+                respondent_details_1, respondent_details_2, respondent_details_3,
+                respondent_details_4, respondent_details_5, respondent_details_6,
+                vehicle_registration_number, nature_of_offence,
+                date_charge_certificate_served, amount_due
+            ) values (
+                :caseReference, :fileIdentifier, :batchIdentifier, :penaltyChargeNumber,
+                :localAuthority,
+                :respondentDetails1, :respondentDetails2, :respondentDetails3,
+                :respondentDetails4, :respondentDetails5, :respondentDetails6,
+                :vehicleRegistrationNumber, :natureOfOffence,
+                :dateChargeCertificateServed, :amountDue
+            )
+            """, registrationParameters(caseReference, tecCase));
+    }
+
+    private MapSqlParameterSource registrationParameters(long caseReference, TecCase tecCase) {
         return new MapSqlParameterSource()
             .addValue("caseReference", caseReference)
             .addValue("fileIdentifier", tecCase.getFileIdentifier())
@@ -697,103 +659,366 @@ public class TecCaseRepository {
             .addValue("amountDue", tecCase.getAmountDue());
     }
 
-    private static void mapApplicationFields(ResultSet resultSet, TecCase result) throws SQLException {
-        Date applicationDateReceived = resultSet.getDate("application_date_received");
-        if (applicationDateReceived != null) {
-            result.setApplicationDateReceived(applicationDateReceived.toLocalDate());
+    private void applyCurrentRegistration(TecCase result, long caseReference) {
+        List<TecCase> rows = database.query("""
+            select file_identifier, batch_identifier, batch_case_reference, penalty_charge_number,
+                   respondent_details_4, respondent_details_5, respondent_details_6,
+                   nature_of_offence, date_charge_certificate_served, amount_due,
+                   payment_status, payment_reference, closure_reason,
+                   registration_document, registration_date
+              from tec_case_registration
+             where case_reference = :caseReference
+             order by %s
+             limit 1
+            """.formatted(CURRENT_RECORD_ORDER), Map.of("caseReference", caseReference),
+            (resultSet, rowNumber) -> {
+                TecCase registration = new TecCase();
+                registration.setFileIdentifier(resultSet.getString("file_identifier"));
+                registration.setBatchIdentifier(resultSet.getString("batch_identifier"));
+                long batchCaseReference = resultSet.getLong("batch_case_reference");
+                if (!resultSet.wasNull()) {
+                    registration.setBatchCase(CaseLink.builder()
+                        .caseReference(Long.toString(batchCaseReference))
+                        .caseType(BatchCaseConfiguration.CASE_TYPE)
+                        .build());
+                }
+                registration.setPenaltyChargeNumber(resultSet.getString("penalty_charge_number"));
+                registration.setRespondentDetails4(resultSet.getString("respondent_details_4"));
+                registration.setRespondentDetails5(resultSet.getString("respondent_details_5"));
+                registration.setRespondentDetails6(resultSet.getString("respondent_details_6"));
+                registration.setNatureOfOffence(resultSet.getString("nature_of_offence"));
+                registration.setDateChargeCertificateServed(
+                    resultSet.getString("date_charge_certificate_served")
+                );
+                registration.setAmountDue(resultSet.getInt("amount_due"));
+                registration.setPaymentStatus(resultSet.getString("payment_status"));
+                registration.setPaymentReference(resultSet.getString("payment_reference"));
+                registration.setClosureReason(resultSet.getString("closure_reason"));
+                registration.setRegistrationDocument(resultSet.getString("registration_document"));
+                Date registrationDate = resultSet.getDate("registration_date");
+                if (registrationDate != null) {
+                    registration.setRegistrationDate(registrationDate.toLocalDate());
+                }
+                return registration;
+            });
+        if (rows.isEmpty()) {
+            return;
         }
-        String applicationType = resultSet.getString("application_type");
-        if (applicationType != null) {
-            result.setApplicationType(ApplicationTimeliness.valueOf(applicationType));
-        }
-        String applicationTe7Submitted = resultSet.getString("application_te7_submitted");
-        if (applicationTe7Submitted != null) {
-            result.setApplicationTe7Submitted(YesNo.valueOf(applicationTe7Submitted));
-        }
-        String applicationForm = resultSet.getString("application_form");
-        if (applicationForm != null) {
-            result.setApplicationForm(ApplicationForm.valueOf(applicationForm));
-        }
-        result.setApplicationPenaltyChargeNumber(
-            resultSet.getString("application_penalty_charge_number")
-        );
-        result.setApplicationVehicleRegistration(
-            resultSet.getString("application_vehicle_registration")
-        );
-        result.setApplicationApplicant(resultSet.getString("application_applicant"));
-        result.setApplicationLocationOfContravention(
-            resultSet.getString("application_location_of_contravention")
-        );
-        Date applicationDateOfContravention = resultSet.getDate("application_date_of_contravention");
-        if (applicationDateOfContravention != null) {
-            result.setApplicationDateOfContravention(applicationDateOfContravention.toLocalDate());
-        }
-        result.setApplicationTitle(resultSet.getString("application_title"));
-        result.setApplicationFullName(resultSet.getString("application_full_name"));
-        result.setApplicationCompanyName(resultSet.getString("application_company_name"));
-        result.setApplicationAddress(resultSet.getString("application_address"));
-        result.setApplicationPostcode(resultSet.getString("application_postcode"));
-        String applicationDeclaration = resultSet.getString("application_declaration");
-        if (applicationDeclaration != null) {
-            result.setApplicationDeclaration(ApplicationDeclaration.valueOf(applicationDeclaration));
-        }
-        String applicationReasonsGiven = resultSet.getString("application_reasons_given");
-        if (applicationReasonsGiven != null) {
-            result.setApplicationReasonsGiven(YesNo.valueOf(applicationReasonsGiven));
-        }
-        Date applicationDatePaid = resultSet.getDate("application_date_paid");
-        if (applicationDatePaid != null) {
-            result.setApplicationDatePaid(applicationDatePaid.toLocalDate());
-        }
-        result.setApplicationHowPaid(resultSet.getString("application_how_paid"));
-        result.setApplicationPaidTo(resultSet.getString("application_paid_to"));
+        TecCase registration = rows.get(0);
+        result.setFileIdentifier(registration.getFileIdentifier());
+        result.setBatchIdentifier(registration.getBatchIdentifier());
+        result.setBatchCase(registration.getBatchCase());
+        result.setPenaltyChargeNumber(registration.getPenaltyChargeNumber());
+        result.setRespondentDetails4(registration.getRespondentDetails4());
+        result.setRespondentDetails5(registration.getRespondentDetails5());
+        result.setRespondentDetails6(registration.getRespondentDetails6());
+        result.setNatureOfOffence(registration.getNatureOfOffence());
+        result.setDateChargeCertificateServed(registration.getDateChargeCertificateServed());
+        result.setAmountDue(registration.getAmountDue());
+        result.setPaymentStatus(registration.getPaymentStatus());
+        result.setPaymentReference(registration.getPaymentReference());
+        result.setClosureReason(registration.getClosureReason());
+        result.setRegistrationDocument(registration.getRegistrationDocument());
+        result.setRegistrationDate(registration.getRegistrationDate());
     }
 
-    private static void mapTimeExtensionFields(ResultSet resultSet, TecCase result) throws SQLException {
-        String timeExtensionForm = resultSet.getString("time_extension_form");
-        if (timeExtensionForm != null) {
-            result.setTimeExtensionForm(TimeExtensionForm.valueOf(timeExtensionForm));
+    private void requireFormPcn(long caseReference, String penaltyChargeNumber) {
+        String current = currentRegistrationPcn(caseReference);
+        if (!current.equals(penaltyChargeNumber)) {
+            throw new IllegalArgumentException(
+                "Form PCN must match the current registration PCN " + current
+            );
         }
-        result.setTimeExtensionPenaltyChargeNumber(
-            resultSet.getString("time_extension_penalty_charge_number")
-        );
-        result.setTimeExtensionVehicleRegistration(
-            resultSet.getString("time_extension_vehicle_registration")
-        );
-        result.setTimeExtensionApplicant(resultSet.getString("time_extension_applicant"));
-        result.setTimeExtensionLocationOfContravention(
-            resultSet.getString("time_extension_location_of_contravention")
-        );
-        Date timeExtensionDateOfContravention = resultSet.getDate("time_extension_date_of_contravention");
-        if (timeExtensionDateOfContravention != null) {
-            result.setTimeExtensionDateOfContravention(timeExtensionDateOfContravention.toLocalDate());
+    }
+
+    private void updateCurrent(String sql, String missingMessage, MapSqlParameterSource parameters) {
+        int updated = database.update(sql.formatted(CURRENT_RECORD_ORDER), parameters);
+        if (updated == 0) {
+            throw new IllegalArgumentException(missingMessage);
         }
-        result.setTimeExtensionTitle(resultSet.getString("time_extension_title"));
-        result.setTimeExtensionOtherTitle(resultSet.getString("time_extension_other_title"));
-        result.setTimeExtensionFullName(resultSet.getString("time_extension_full_name"));
-        result.setTimeExtensionCompanyName(resultSet.getString("time_extension_company_name"));
-        result.setTimeExtensionAddress(resultSet.getString("time_extension_address"));
-        result.setTimeExtensionPostcode(resultSet.getString("time_extension_postcode"));
-        String permissionType = resultSet.getString("time_extension_permission_type");
-        if (permissionType != null) {
-            result.setTimeExtensionPermissionType(TimeExtensionPermissionType.valueOf(permissionType));
-        }
-        String reasonsGiven = resultSet.getString("time_extension_reasons_given");
-        if (reasonsGiven != null) {
-            result.setTimeExtensionReasonsGiven(YesNo.valueOf(reasonsGiven));
-        }
-        String signedAndDated = resultSet.getString("time_extension_signed_and_dated");
-        if (signedAndDated != null) {
-            result.setTimeExtensionSignedAndDated(YesNo.valueOf(signedAndDated));
-        }
-        String signedBy = resultSet.getString("time_extension_signed_by");
-        if (signedBy != null) {
-            result.setTimeExtensionSignedBy(TimeExtensionSignedBy.valueOf(signedBy));
-        }
-        Date dateSigned = resultSet.getDate("time_extension_date_signed");
-        if (dateSigned != null) {
-            result.setTimeExtensionDateSigned(dateSigned.toLocalDate());
-        }
-        result.setTimeExtensionPrintFullName(resultSet.getString("time_extension_print_full_name"));
+    }
+
+    private void insertTe9(long caseReference, TecCase tecCase) {
+        database.update("""
+            insert into tec_case_te9 (
+                case_reference, penalty_charge_number, date_received, type, te7_submitted,
+                vehicle_registration, applicant, location_of_contravention, date_of_contravention,
+                title, full_name, company_name, address, postcode, declaration,
+                date_paid, how_paid, paid_to
+            ) values (
+                :caseReference, :penaltyChargeNumber, :dateReceived, :type, :te7Submitted,
+                :vehicleRegistration, :applicant, :locationOfContravention, :dateOfContravention,
+                :title, :fullName, :companyName, :address, :postcode, :declaration,
+                :datePaid, :howPaid, :paidTo
+            )
+            """, applicationInsertParameters(caseReference, tecCase));
+    }
+
+    private void insertPe3(long caseReference, TecCase tecCase) {
+        database.update("""
+            insert into tec_case_pe3 (
+                case_reference, penalty_charge_number, date_received, type, te7_submitted,
+                vehicle_registration, applicant, location_of_contravention, date_of_contravention,
+                title, full_name, company_name, address, postcode, declaration, reasons_given,
+                date_paid, how_paid, paid_to
+            ) values (
+                :caseReference, :penaltyChargeNumber, :dateReceived, :type, :te7Submitted,
+                :vehicleRegistration, :applicant, :locationOfContravention, :dateOfContravention,
+                :title, :fullName, :companyName, :address, :postcode, :declaration, :reasonsGiven,
+                :datePaid, :howPaid, :paidTo
+            )
+            """, applicationInsertParameters(caseReference, tecCase)
+            .addValue(
+                "reasonsGiven",
+                tecCase.getApplicationReasonsGiven() == null
+                    ? null
+                    : tecCase.getApplicationReasonsGiven().name()
+            ));
+    }
+
+    private MapSqlParameterSource applicationInsertParameters(long caseReference, TecCase tecCase) {
+        return new MapSqlParameterSource()
+            .addValue("caseReference", caseReference)
+            .addValue("penaltyChargeNumber", tecCase.getApplicationPenaltyChargeNumber())
+            .addValue("dateReceived", tecCase.getApplicationDateReceived())
+            .addValue(
+                "type",
+                tecCase.getApplicationType() == null ? null : tecCase.getApplicationType().name()
+            )
+            .addValue("te7Submitted", yesNoName(tecCase.getApplicationTe7Submitted()))
+            .addValue("vehicleRegistration", tecCase.getApplicationVehicleRegistration())
+            .addValue("applicant", tecCase.getApplicationApplicant())
+            .addValue("locationOfContravention", tecCase.getApplicationLocationOfContravention())
+            .addValue("dateOfContravention", tecCase.getApplicationDateOfContravention())
+            .addValue("title", tecCase.getApplicationTitle())
+            .addValue("fullName", tecCase.getApplicationFullName())
+            .addValue("companyName", tecCase.getApplicationCompanyName())
+            .addValue("address", tecCase.getApplicationAddress())
+            .addValue("postcode", tecCase.getApplicationPostcode())
+            .addValue(
+                "declaration",
+                tecCase.getApplicationDeclaration() == null
+                    ? null
+                    : tecCase.getApplicationDeclaration().name()
+            )
+            .addValue("datePaid", tecCase.getApplicationDatePaid())
+            .addValue("howPaid", tecCase.getApplicationHowPaid())
+            .addValue("paidTo", tecCase.getApplicationPaidTo());
+    }
+
+    private void insertTe7(long caseReference, TecCase tecCase) {
+        database.update("""
+            insert into tec_case_te7 (
+                case_reference, penalty_charge_number, vehicle_registration, title, other_title,
+                full_name, company_name, address, postcode, permission_type, reasons_given,
+                signed_and_dated, signed_by, date_signed, print_full_name
+            ) values (
+                :caseReference, :penaltyChargeNumber, :vehicleRegistration, :title, :otherTitle,
+                :fullName, :companyName, :address, :postcode, :permissionType, :reasonsGiven,
+                :signedAndDated, :signedBy, :dateSigned, :printFullName
+            )
+            """, new MapSqlParameterSource()
+            .addValue("caseReference", caseReference)
+            .addValue("penaltyChargeNumber", tecCase.getTimeExtensionPenaltyChargeNumber())
+            .addValue("vehicleRegistration", tecCase.getTimeExtensionVehicleRegistration())
+            .addValue("title", tecCase.getTimeExtensionTitle())
+            .addValue("otherTitle", tecCase.getTimeExtensionOtherTitle())
+            .addValue("fullName", tecCase.getTimeExtensionFullName())
+            .addValue("companyName", tecCase.getTimeExtensionCompanyName())
+            .addValue("address", tecCase.getTimeExtensionAddress())
+            .addValue("postcode", tecCase.getTimeExtensionPostcode())
+            .addValue(
+                "permissionType",
+                tecCase.getTimeExtensionPermissionType() == null
+                    ? null
+                    : tecCase.getTimeExtensionPermissionType().name()
+            )
+            .addValue("reasonsGiven", yesNoName(tecCase.getTimeExtensionReasonsGiven()))
+            .addValue("signedAndDated", yesNoName(tecCase.getTimeExtensionSignedAndDated()))
+            .addValue(
+                "signedBy",
+                tecCase.getTimeExtensionSignedBy() == null
+                    ? null
+                    : tecCase.getTimeExtensionSignedBy().name()
+            )
+            .addValue("dateSigned", tecCase.getTimeExtensionDateSigned())
+            .addValue("printFullName", tecCase.getTimeExtensionPrintFullName()));
+    }
+
+    private void insertPe2(long caseReference, TecCase tecCase) {
+        database.update("""
+            insert into tec_case_pe2 (
+                case_reference, penalty_charge_number, vehicle_registration, applicant,
+                location_of_contravention, date_of_contravention, full_name, address, postcode,
+                reasons_given, signed_and_dated, date_signed
+            ) values (
+                :caseReference, :penaltyChargeNumber, :vehicleRegistration, :applicant,
+                :locationOfContravention, :dateOfContravention, :fullName, :address, :postcode,
+                :reasonsGiven, :signedAndDated, :dateSigned
+            )
+            """, new MapSqlParameterSource()
+            .addValue("caseReference", caseReference)
+            .addValue("penaltyChargeNumber", tecCase.getTimeExtensionPenaltyChargeNumber())
+            .addValue("vehicleRegistration", tecCase.getTimeExtensionVehicleRegistration())
+            .addValue("applicant", tecCase.getTimeExtensionApplicant())
+            .addValue("locationOfContravention", tecCase.getTimeExtensionLocationOfContravention())
+            .addValue("dateOfContravention", tecCase.getTimeExtensionDateOfContravention())
+            .addValue("fullName", tecCase.getTimeExtensionFullName())
+            .addValue("address", tecCase.getTimeExtensionAddress())
+            .addValue("postcode", tecCase.getTimeExtensionPostcode())
+            .addValue("reasonsGiven", yesNoName(tecCase.getTimeExtensionReasonsGiven()))
+            .addValue("signedAndDated", yesNoName(tecCase.getTimeExtensionSignedAndDated()))
+            .addValue("dateSigned", tecCase.getTimeExtensionDateSigned()));
+    }
+
+    private Te9CaseDetails findCurrentTe9(long caseReference) {
+        List<Te9CaseDetails> rows = database.query("""
+            select penalty_charge_number, date_received, type, te7_submitted, vehicle_registration,
+                   applicant, location_of_contravention, date_of_contravention, title, full_name,
+                   company_name, address, postcode, declaration, date_paid, how_paid, paid_to
+              from tec_case_te9
+             where case_reference = :caseReference
+             order by %s
+             limit 1
+            """.formatted(CURRENT_RECORD_ORDER), Map.of("caseReference", caseReference),
+            (resultSet, rowNumber) -> {
+                Te9CaseDetails details = new Te9CaseDetails();
+                details.setForm(ApplicationForm.TE9);
+                details.setPenaltyChargeNumber(resultSet.getString("penalty_charge_number"));
+                details.setDateReceived(localDate(resultSet, "date_received"));
+                details.setType(enumValue(ApplicationTimeliness.class, resultSet.getString("type")));
+                details.setTe7Submitted(yesNo(resultSet.getString("te7_submitted")));
+                details.setVehicleRegistration(resultSet.getString("vehicle_registration"));
+                details.setApplicant(resultSet.getString("applicant"));
+                details.setLocationOfContravention(resultSet.getString("location_of_contravention"));
+                details.setDateOfContravention(localDate(resultSet, "date_of_contravention"));
+                details.setTitle(resultSet.getString("title"));
+                details.setFullName(resultSet.getString("full_name"));
+                details.setCompanyName(resultSet.getString("company_name"));
+                details.setAddress(resultSet.getString("address"));
+                details.setPostcode(resultSet.getString("postcode"));
+                details.setDeclaration(
+                    enumValue(ApplicationDeclaration.class, resultSet.getString("declaration"))
+                );
+                details.setDatePaid(localDate(resultSet, "date_paid"));
+                details.setHowPaid(resultSet.getString("how_paid"));
+                details.setPaidTo(resultSet.getString("paid_to"));
+                return details;
+            });
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private Pe3CaseDetails findCurrentPe3(long caseReference) {
+        List<Pe3CaseDetails> rows = database.query("""
+            select penalty_charge_number, date_received, type, te7_submitted, vehicle_registration,
+                   applicant, location_of_contravention, date_of_contravention, title, full_name,
+                   company_name, address, postcode, declaration, reasons_given,
+                   date_paid, how_paid, paid_to
+              from tec_case_pe3
+             where case_reference = :caseReference
+             order by %s
+             limit 1
+            """.formatted(CURRENT_RECORD_ORDER), Map.of("caseReference", caseReference),
+            (resultSet, rowNumber) -> {
+                Pe3CaseDetails details = new Pe3CaseDetails();
+                details.setForm(ApplicationForm.PE3);
+                details.setPenaltyChargeNumber(resultSet.getString("penalty_charge_number"));
+                details.setDateReceived(localDate(resultSet, "date_received"));
+                details.setType(enumValue(ApplicationTimeliness.class, resultSet.getString("type")));
+                details.setTe7Submitted(yesNo(resultSet.getString("te7_submitted")));
+                details.setVehicleRegistration(resultSet.getString("vehicle_registration"));
+                details.setApplicant(resultSet.getString("applicant"));
+                details.setLocationOfContravention(resultSet.getString("location_of_contravention"));
+                details.setDateOfContravention(localDate(resultSet, "date_of_contravention"));
+                details.setTitle(resultSet.getString("title"));
+                details.setFullName(resultSet.getString("full_name"));
+                details.setCompanyName(resultSet.getString("company_name"));
+                details.setAddress(resultSet.getString("address"));
+                details.setPostcode(resultSet.getString("postcode"));
+                details.setDeclaration(
+                    enumValue(ApplicationDeclaration.class, resultSet.getString("declaration"))
+                );
+                details.setReasonsGiven(yesNo(resultSet.getString("reasons_given")));
+                details.setDatePaid(localDate(resultSet, "date_paid"));
+                details.setHowPaid(resultSet.getString("how_paid"));
+                details.setPaidTo(resultSet.getString("paid_to"));
+                return details;
+            });
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private Te7CaseDetails findCurrentTe7(long caseReference) {
+        List<Te7CaseDetails> rows = database.query("""
+            select penalty_charge_number, vehicle_registration, title, other_title, full_name,
+                   company_name, address, postcode, permission_type, reasons_given,
+                   signed_and_dated, signed_by, date_signed, print_full_name
+              from tec_case_te7
+             where case_reference = :caseReference
+             order by %s
+             limit 1
+            """.formatted(CURRENT_RECORD_ORDER), Map.of("caseReference", caseReference),
+            (resultSet, rowNumber) -> {
+                Te7CaseDetails details = new Te7CaseDetails();
+                details.setForm(TimeExtensionForm.TE7);
+                details.setPenaltyChargeNumber(resultSet.getString("penalty_charge_number"));
+                details.setVehicleRegistration(resultSet.getString("vehicle_registration"));
+                details.setTitle(resultSet.getString("title"));
+                details.setOtherTitle(resultSet.getString("other_title"));
+                details.setFullName(resultSet.getString("full_name"));
+                details.setCompanyName(resultSet.getString("company_name"));
+                details.setAddress(resultSet.getString("address"));
+                details.setPostcode(resultSet.getString("postcode"));
+                details.setPermissionType(enumValue(
+                    TimeExtensionPermissionType.class,
+                    resultSet.getString("permission_type")
+                ));
+                details.setReasonsGiven(yesNo(resultSet.getString("reasons_given")));
+                details.setSignedAndDated(yesNo(resultSet.getString("signed_and_dated")));
+                details.setSignedBy(
+                    enumValue(TimeExtensionSignedBy.class, resultSet.getString("signed_by"))
+                );
+                details.setDateSigned(localDate(resultSet, "date_signed"));
+                details.setPrintFullName(resultSet.getString("print_full_name"));
+                return details;
+            });
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private Pe2CaseDetails findCurrentPe2(long caseReference) {
+        List<Pe2CaseDetails> rows = database.query("""
+            select penalty_charge_number, vehicle_registration, applicant,
+                   location_of_contravention, date_of_contravention, full_name, address, postcode,
+                   reasons_given, signed_and_dated, date_signed
+              from tec_case_pe2
+             where case_reference = :caseReference
+             order by %s
+             limit 1
+            """.formatted(CURRENT_RECORD_ORDER), Map.of("caseReference", caseReference),
+            (resultSet, rowNumber) -> {
+                Pe2CaseDetails details = new Pe2CaseDetails();
+                details.setForm(TimeExtensionForm.PE2);
+                details.setPenaltyChargeNumber(resultSet.getString("penalty_charge_number"));
+                details.setVehicleRegistration(resultSet.getString("vehicle_registration"));
+                details.setApplicant(resultSet.getString("applicant"));
+                details.setLocationOfContravention(resultSet.getString("location_of_contravention"));
+                details.setDateOfContravention(localDate(resultSet, "date_of_contravention"));
+                details.setFullName(resultSet.getString("full_name"));
+                details.setAddress(resultSet.getString("address"));
+                details.setPostcode(resultSet.getString("postcode"));
+                details.setReasonsGiven(yesNo(resultSet.getString("reasons_given")));
+                details.setSignedAndDated(yesNo(resultSet.getString("signed_and_dated")));
+                details.setDateSigned(localDate(resultSet, "date_signed"));
+                return details;
+            });
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    private static LocalDate localDate(ResultSet resultSet, String column) throws SQLException {
+        Date value = resultSet.getDate(column);
+        return value == null ? null : value.toLocalDate();
+    }
+
+    private static <E extends Enum<E>> E enumValue(Class<E> type, String value) {
+        return value == null ? null : Enum.valueOf(type, value);
     }
 }

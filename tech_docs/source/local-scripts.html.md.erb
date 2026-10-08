@@ -50,7 +50,8 @@ Used by other scripts; rarely invoked directly.
 | --- | --- | --- |
 | `bin/create-tec-batch.sh` | `<local-authority> [batch-type]` | Create one `TEC_BATCH` via `POST /batches`. No args shows help (unless `LOCAL_AUTHORITY` is set). Batch types: `registration`, `warrantAuthRequests`, `warrantReissueRequests`, `outOfTimeDecisions`, `changeOfAddress`, `caseClosureRequests`, `transferRequest` |
 | `bin/create-tec-batches.sh` | `<count> [batch-type]` | Create many batches (rotates authority / type / state unless fixed). No args shows help |
-| `bin/create-tec-case.sh` | `<batch-case-reference\|->` | Create one `TEC` PCN. The PCN comes from `generate-pcn-number.sh` using `LOCAL_AUTHORITY`'s TEC id (default Westminster `WE`). Pass `-` for unlinked; pass a batch ref (or `BATCH_CASE_REFERENCE`) to link after create |
+| `bin/create-tec-case.sh` | `<batch-case-reference\|->` | Create one `TEC` PCN. The PCN comes from `generate-pcn-number.sh` (suffix `0`) using `LOCAL_AUTHORITY`'s TEC id (default Westminster `WE`). That full number is the first registration; the case stores the stem. Pass `-` for unlinked; pass a batch ref (or `BATCH_CASE_REFERENCE`) to link after create |
+| `bin/add-tec-registration.sh` | `<case-reference>` | Add a registration: new registration batch (`PCN_COUNT=1`), `addRegistration` with the next PCN suffix, then link that batch. Copies respondent details, local authority, vehicle, offence, certificate date, and amount from the case |
 | `bin/create-tec-cases.sh` | `<batch-case-reference\|->` | Bulk randomised PCNs (`CASE_COUNT`, default 20). Each PCN uses that case's TEC authority id |
 | `bin/create-gm-tec-cases.sh` | `<batch-case-reference\|->` | PCNs for each Greater Manchester authority (`CASES_PER_AUTHORITY`, default 10), via `create-tec-case.sh` |
 | `bin/create-tec-exception-case.sh` | (optional env overrides) | Create one `TEC_EXCEPTION` via `POST /exception-cases` |
@@ -87,7 +88,7 @@ LOCAL_AUTHORITY=manchesterCityCouncil ./bin/create-tec-case.sh -
 
 | Script | Usage summary | Purpose |
 | --- | --- | --- |
-| `bin/link-pcn-to-batch.sh` | `<pcn-case-reference> <batch-case-reference>` | Loads batch operation; PCN `linkBatchCase` (`batchLinkCase` + `batchLinkType`, not Case details `batchCase`) then batch `linkPcnCases` (ExUI **linked to** / **linked from**). Registration sets `batch_case_reference`; other types use `tec_batch_pcn_link` without changing Case details **Batch case**. Additive: existing registration / Linked Cases links remain. Reason `OtherDescription` depends on the batch type. PCN state: `transferRequest` → `REFER_FOR_ENFORCEMENT`, `caseClosureRequests` → `CLOSED`, others unchanged |
+| `bin/link-pcn-to-batch.sh` | `<pcn-case-reference> <batch-case-reference>` | Loads batch operation; PCN `linkBatchCase` (`batchLinkCase` + `batchLinkType`, not Case details `batchCase`) then batch `linkPcnCases` (ExUI **linked to** / **linked from**). Registration sets the current registration's batch link; other types use `tec_batch_pcn_link` without changing Case details **Batch case**. A case may have one registration batch per registration. Reason `OtherDescription` depends on the batch type. PCN state: `transferRequest` → `REFER_FOR_ENFORCEMENT`, `caseClosureRequests` → `CLOSED`, others unchanged |
 | `bin/transition-to-case-issued.sh` | `<pcn-case-reference>` | Fire `registrationPaymentSucceeded` so a PCN reaches `CASE_ISSUED` |
 | `bin/set-case-state.sh` | `<pcn-case-reference> <state>` | Fire `setCaseState` to jump a PCN to any `CaseState` (see [CCD architecture — States and events](/ccd-architecture.html#states-and-events)) |
 | `bin/complete-batch-processing.sh` | `<batch-ref> <output-file-1> <output-file-2>` | Attach two Outputs documents and move a batch to `PROCESSING_COMPLETE` |
@@ -106,16 +107,16 @@ Link reason text (LOV `CLRC007` = Other) by batch type:
 
 Override with `BATCH_REGISTRATION_REASON`, `BATCH_WARRANT_AUTH_REASON`, and the other `BATCH_*_REASON` env vars, or `BATCH_LINK_REASON_CODE` for the LOV key.
 
-A PCN may be linked to a registration batch and later to other batch types (e.g. warrant auth). Case details
-**Batch case** stays on the registration batch; Linked Cases **linked from** lists each linked batch.
+A PCN may be linked to one registration batch per registration, and also to other batch types (e.g. warrant auth). Case details
+**Batch case** is the current registration's batch; Linked Cases **linked from** lists each linked batch.
 
 ## Documents and applications
 
 | Script | Usage summary | Purpose |
 | --- | --- | --- |
 | `bin/attach-case-file-document.sh` | `<case-ref> <folder> <file-path>` | Upload via Case Document AM and attach to Case File View. PCN folders by default. For batches: `CASE_TYPE_ID=TEC_BATCH EVENT_ID=attachBatchDocument` and folder `inputs` / `outputs` (payload field `batchFileDocument`) |
-| `bin/generate-application.sh` | `<case-ref> <in\|out of time> <TE9\|PE3>` | `recordApplication`, fill PDF, attach under Applications |
-| `bin/generate-time-extension.sh` | `<case-ref> <TE7\|PE2>` | `recordTimeExtension`, fill PDF, attach under Applications |
+| `bin/generate-application.sh` | `<case-ref> <in\|out of time> <TE9\|PE3>` | `recordApplication` (inserts a TE9 or PE3 row). The form PCN is the current registration PCN. The PDF name includes that PCN, for example `Statutory declaration - Out of time - AB0531612A2.pdf` |
+| `bin/generate-time-extension.sh` | `<case-ref> <TE7\|PE2>` | `recordTimeExtension` (inserts a TE7 or PE2 row). Same PCN and filename rule as applications |
 | `bin/enter-general-application.sh` | `<case-ref> <local authority\|respondent>` | `enterGeneralApplication` — uploads `N244_0622.pdf` and records an Issued general application. The event files the N244 under Applications and leaves PCN state unchanged. Clerk user (`tec-demo@test.com`) |
 | `bin/apply-warrant-authorisation.sh` | `<case-ref>` | `applyWarrantAuthorisation` — appends a warrant authorisation (issue/expiry/status) to the PCN; `STATUS=active` → `WARRANT_AUTHORISATION_ISSUED`, `expired` → `WARRANT_AUTHORISATION_EXPIRED`, `cancelled` → state unchanged |
 

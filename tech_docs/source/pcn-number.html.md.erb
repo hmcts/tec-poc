@@ -5,9 +5,10 @@ weight: 32
 
 # Penalty charge numbers
 
-A penalty charge number (PCN) identifies one penalty charge. Local seed scripts build it with
-`bin/generate-pcn-number.sh`. The same number is stored on the TEC case as **Penalty charge number**
-and copied onto applications that quote it.
+A penalty charge number (PCN) identifies one registration or one received form. Local seed scripts
+build the first registration with `bin/generate-pcn-number.sh`. The case stores the **PCN stem**
+(everything except the final suffix digit). Each registration and each TE9, TE7, PE3, and PE2 row
+stores its own full PCN.
 
 ## Format
 
@@ -22,13 +23,17 @@ AA9999999X9
 | `X` | 1 character | Mod 11 check digit (`0`–`9`, or `A` when the remainder is 10) |
 | `9` | 1 digit | Numeric suffix |
 
-In this POC the suffix is always `0`. It marks a reissue of the same charge and is **not** included
-in the check-digit calculation. A 2-letter authority produces 11 characters (`WE705998990`). A
-3-letter authority produces 12 (`WCC123456700`).
+The suffix is **not** included in the check-digit calculation. The first registration on a case
+uses suffix `0`. A later registration uses the stem plus one more than the highest existing
+registration suffix, and a suffix above `9` is rejected. A received form uses the current
+registration's full PCN (the highest registration suffix). The same form PCN may be stored more
+than once. A 2-letter authority produces 11 characters (`WE705998990`). A 3-letter authority
+produces 12 (`WCC123456700`).
 
-The create API accepts `^[A-Z]{2,3}[0-9]{7}[0-9A][0-9]$`. On a PCN case the file identifier
+The create API accepts `^[A-Z]{2,3}[0-9]{7}[0-9A]0$` (suffix `0` only). The case then stores the
+stem `^[A-Z]{2,3}[0-9]{7}[0-9A]$`. On a registration the file identifier
 (`R` + authority id + 5 digits) and batch identifier (`R` + authority id + 6 digits) must use the
-same authority id as the PCN.
+same authority id as that registration's PCN.
 
 If the authority id or the 7-digit number is missing, the check digit is not calculated.
 

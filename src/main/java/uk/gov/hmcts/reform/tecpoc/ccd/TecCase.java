@@ -30,18 +30,26 @@ public class TecCase {
     @CCD(label = "State")
     private String statusDisplay;
 
-    @CCD(label = "File identifier")
+    /**
+     * PCN without the suffix digit. Set when the case is created and never changed.
+     * Shown at the top of Case details and used as the case list column and filter.
+     */
+    @CCD(label = "PCN stem")
+    private String pcnStem;
+
+    @CCD(label = "File identifier", searchable = false)
     private String fileIdentifier;
 
     @CCD(label = "Batch identifier")
     private String batchIdentifier;
 
     /**
-     * CCD link to the registration {@code TEC_BATCH} case (Case details only).
-     * Persisted as {@code tec_case.batch_case_reference}; reconstructed by {@link TecCaseView}.
-     * Not used as the {@code linkBatchCase} event target — see {@link #batchLinkCase}.
+     * CCD link to the current registration's {@code TEC_BATCH} case (Case details only).
+     * Persisted on {@code tec_case_registration.batch_case_reference}; reconstructed by
+     * {@link TecCaseView}. Not used as the {@code linkBatchCase} event target — see
+     * {@link #batchLinkCase}.
      */
-    @CCD(label = "Batch case")
+    @CCD(label = "Batch case", searchable = false)
     private CaseLink batchCase;
 
     /**
@@ -65,7 +73,11 @@ public class TecCase {
     )
     private BatchOperation batchLinkType;
 
-    @CCD(label = "Penalty charge number")
+    /**
+     * Full PCN of the registration shown on Case details (stem plus suffix).
+     * The case list uses {@link #pcnStem}.
+     */
+    @CCD(label = "Penalty charge number", searchable = false)
     private String penaltyChargeNumber;
 
     @CCD(
@@ -92,41 +104,41 @@ public class TecCase {
     @CCD(label = "Respondent details 3")
     private String respondentDetails3;
 
-    @CCD(label = "Respondent details 4")
+    @CCD(label = "Respondent details 4", searchable = false)
     private String respondentDetails4;
 
-    @CCD(label = "Respondent details 5")
+    @CCD(label = "Respondent details 5", searchable = false)
     private String respondentDetails5;
 
-    @CCD(label = "Respondent details 6")
+    @CCD(label = "Respondent details 6", searchable = false)
     private String respondentDetails6;
 
     @CCD(label = "Vehicle registration number")
     private String vehicleRegistrationNumber;
 
-    @CCD(label = "Nature of offence")
+    @CCD(label = "Nature of offence", searchable = false)
     private String natureOfOffence;
 
-    @CCD(label = "Date charge certificate served")
+    @CCD(label = "Date charge certificate served", searchable = false)
     private String dateChargeCertificateServed;
 
-    @CCD(label = "Amount due", typeOverride = FieldType.MoneyGBP, min = 0, max = 999999)
+    @CCD(label = "Amount due", typeOverride = FieldType.MoneyGBP, min = 0, max = 999999, searchable = false)
     @JsonSerialize(using = ToStringSerializer.class)
     private Integer amountDue;
 
-    @CCD(label = "Payment status")
+    @CCD(label = "Payment status", searchable = false)
     private String paymentStatus;
 
-    @CCD(label = "Payment reference")
+    @CCD(label = "Payment reference", searchable = false)
     private String paymentReference;
 
-    @CCD(label = "Closure reason")
+    @CCD(label = "Closure reason", searchable = false)
     private String closureReason;
 
-    @CCD(label = "Registration authorisation document")
+    @CCD(label = "Registration authorisation document", searchable = false)
     private String registrationDocument;
 
-    @CCD(label = "Registration date")
+    @CCD(label = "Registration date", searchable = false)
     private LocalDate registrationDate;
 
     /**
@@ -165,169 +177,192 @@ public class TecCase {
     private String ootRejectionEmail;
 
     /**
-     * Case-view display for form validation at the top of the TE9/PE3 section. Always populated so
-     * ExUI shows the row even when {@link #formValidationResult} is unset
-     * ({@code @JsonInclude(NON_NULL)} would otherwise omit it).
+     * Current TE9 on Case details. Populated by {@link TecCaseView}.
      */
-    @CCD(label = "Form validation result", searchable = false)
-    private String formValidationResultDisplay;
+    @JsonUnwrapped(prefix = "te9")
+    @CCD(searchable = false)
+    private Te9CaseDetails te9Details;
 
     /**
-     * Case-view display for the same shared form validation result at the top of the TE7/PE2
-     * section. Separate field id so CCD can show the value under both form headings.
+     * Current PE3 on Case details. Populated by {@link TecCaseView}.
      */
-    @CCD(label = "Form validation result", searchable = false)
-    private String timeExtensionFormValidationResultDisplay;
+    @JsonUnwrapped(prefix = "pe3")
+    @CCD(searchable = false)
+    private Pe3CaseDetails pe3Details;
 
-    @CCD(label = "Date received")
+    /**
+     * Current TE7 on Case details. Populated by {@link TecCaseView}.
+     */
+    @JsonUnwrapped(prefix = "te7")
+    @CCD(searchable = false)
+    private Te7CaseDetails te7Details;
+
+    /**
+     * Current PE2 on Case details. Populated by {@link TecCaseView}.
+     */
+    @JsonUnwrapped(prefix = "pe2")
+    @CCD(searchable = false)
+    private Pe2CaseDetails pe2Details;
+
+    @CCD(label = "Date received", searchable = false)
     private LocalDate applicationDateReceived;
 
     @CCD(
         label = "Type",
         typeOverride = FieldType.FixedList,
-        typeParameterOverride = "ApplicationTimeliness"
+        typeParameterOverride = "ApplicationTimeliness",
+        searchable = false
     )
     private ApplicationTimeliness applicationType;
 
     @CCD(
         label = "TE7 submitted?",
         typeOverride = FieldType.FixedList,
-        typeParameterOverride = "YesNo"
+        typeParameterOverride = "YesNo",
+        searchable = false
     )
     private YesNo applicationTe7Submitted;
 
     @CCD(
         label = "Form",
         typeOverride = FieldType.FixedList,
-        typeParameterOverride = "ApplicationForm"
+        typeParameterOverride = "ApplicationForm",
+        searchable = false
     )
     private ApplicationForm applicationForm;
 
-    @CCD(label = "Penalty Charge Number")
+    @CCD(label = "Penalty Charge Number", searchable = false)
     private String applicationPenaltyChargeNumber;
 
-    @CCD(label = "Vehicle reg")
+    @CCD(label = "Vehicle reg", searchable = false)
     private String applicationVehicleRegistration;
 
-    @CCD(label = "Applicant")
+    @CCD(label = "Applicant", searchable = false)
     private String applicationApplicant;
 
-    @CCD(label = "Location of contravention")
+    @CCD(label = "Location of contravention", searchable = false)
     private String applicationLocationOfContravention;
 
-    @CCD(label = "Date of contravention")
+    @CCD(label = "Date of contravention", searchable = false)
     private LocalDate applicationDateOfContravention;
 
-    @CCD(label = "Title")
+    @CCD(label = "Title", searchable = false)
     private String applicationTitle;
 
-    @CCD(label = "Full name")
+    @CCD(label = "Full name", searchable = false)
     private String applicationFullName;
 
-    @CCD(label = "Company name")
+    @CCD(label = "Company name", searchable = false)
     private String applicationCompanyName;
 
-    @CCD(label = "Address")
+    @CCD(label = "Address", searchable = false)
     private String applicationAddress;
 
-    @CCD(label = "Postcode")
+    @CCD(label = "Postcode", searchable = false)
     private String applicationPostcode;
 
     @CCD(
         label = "Declaration",
         typeOverride = FieldType.FixedList,
-        typeParameterOverride = "ApplicationDeclaration"
+        typeParameterOverride = "ApplicationDeclaration",
+        searchable = false
     )
     private ApplicationDeclaration applicationDeclaration;
 
     @CCD(
         label = "Reasons given",
         typeOverride = FieldType.FixedList,
-        typeParameterOverride = "YesNo"
+        typeParameterOverride = "YesNo",
+        searchable = false
     )
     private YesNo applicationReasonsGiven;
 
-    @CCD(label = "Date it was paid")
+    @CCD(label = "Date it was paid", searchable = false)
     private LocalDate applicationDatePaid;
 
-    @CCD(label = "How it was paid")
+    @CCD(label = "How it was paid", searchable = false)
     private String applicationHowPaid;
 
-    @CCD(label = "To whom it was paid")
+    @CCD(label = "To whom it was paid", searchable = false)
     private String applicationPaidTo;
 
     @CCD(
         label = "Form",
         typeOverride = FieldType.FixedList,
-        typeParameterOverride = "TimeExtensionForm"
+        typeParameterOverride = "TimeExtensionForm",
+        searchable = false
     )
     private TimeExtensionForm timeExtensionForm;
 
-    @CCD(label = "Penalty Charge Number")
+    @CCD(label = "Penalty Charge Number", searchable = false)
     private String timeExtensionPenaltyChargeNumber;
 
-    @CCD(label = "Vehicle reg")
+    @CCD(label = "Vehicle reg", searchable = false)
     private String timeExtensionVehicleRegistration;
 
-    @CCD(label = "Applicant")
+    @CCD(label = "Applicant", searchable = false)
     private String timeExtensionApplicant;
 
-    @CCD(label = "Location of contravention")
+    @CCD(label = "Location of contravention", searchable = false)
     private String timeExtensionLocationOfContravention;
 
-    @CCD(label = "Date of contravention")
+    @CCD(label = "Date of contravention", searchable = false)
     private LocalDate timeExtensionDateOfContravention;
 
-    @CCD(label = "Title")
+    @CCD(label = "Title", searchable = false)
     private String timeExtensionTitle;
 
-    @CCD(label = "Other title")
+    @CCD(label = "Other title", searchable = false)
     private String timeExtensionOtherTitle;
 
-    @CCD(label = "Full name")
+    @CCD(label = "Full name", searchable = false)
     private String timeExtensionFullName;
 
-    @CCD(label = "Company name")
+    @CCD(label = "Company name", searchable = false)
     private String timeExtensionCompanyName;
 
-    @CCD(label = "Address")
+    @CCD(label = "Address", searchable = false)
     private String timeExtensionAddress;
 
-    @CCD(label = "Postcode")
+    @CCD(label = "Postcode", searchable = false)
     private String timeExtensionPostcode;
 
     @CCD(
         label = "Permission sought",
         typeOverride = FieldType.FixedList,
-        typeParameterOverride = "TimeExtensionPermissionType"
+        typeParameterOverride = "TimeExtensionPermissionType",
+        searchable = false
     )
     private TimeExtensionPermissionType timeExtensionPermissionType;
 
     @CCD(
         label = "Reasons given",
         typeOverride = FieldType.FixedList,
-        typeParameterOverride = "YesNo"
+        typeParameterOverride = "YesNo",
+        searchable = false
     )
     private YesNo timeExtensionReasonsGiven;
 
     @CCD(
         label = "Signed and dated",
         typeOverride = FieldType.FixedList,
-        typeParameterOverride = "YesNo"
+        typeParameterOverride = "YesNo",
+        searchable = false
     )
     private YesNo timeExtensionSignedAndDated;
 
     @CCD(
         label = "Signed by",
         typeOverride = FieldType.FixedList,
-        typeParameterOverride = "TimeExtensionSignedBy"
+        typeParameterOverride = "TimeExtensionSignedBy",
+        searchable = false
     )
     private TimeExtensionSignedBy timeExtensionSignedBy;
 
-    @CCD(label = "Date signed")
+    @CCD(label = "Date signed", searchable = false)
     private LocalDate timeExtensionDateSigned;
 
-    @CCD(label = "Print full name")
+    @CCD(label = "Print full name", searchable = false)
     private String timeExtensionPrintFullName;
 
     /**
@@ -391,8 +426,8 @@ public class TecCase {
      * Standard CCD Linked Cases collection. Field id must remain {@code caseLinks}.
      * Batch links are owned by the batch case ({@code caseLinks} there) so the PCN
      * shows them under ExUI "linked from", not in this collection.
-     * Registration membership is {@code tec_case.batch_case_reference}; other batch
-     * types use {@code tec_batch_pcn_link}.
+     * Registration membership is {@code tec_case_registration.batch_case_reference};
+     * other batch types use {@code tec_batch_pcn_link}.
      */
     @CCD(
         label = "Linked cases",

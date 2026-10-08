@@ -162,7 +162,12 @@ else
   SECTION_LABEL="Application to file out of time"
 fi
 
-ATTACH_PDF_PATH="${WORKDIR}/${SECTION_LABEL}.pdf"
+registration_pcn="$(jq --raw-output '.data.penaltyChargeNumber // empty' "${CASE_JSON_PATH}")"
+if [[ -z "${registration_pcn}" ]]; then
+  echo "Case ${CASE_REFERENCE} has no registration penalty charge number" >&2
+  exit 1
+fi
+ATTACH_PDF_PATH="${WORKDIR}/${SECTION_LABEL} - ${registration_pcn}.pdf"
 mv "${PDF_PATH}" "${ATTACH_PDF_PATH}"
 PDF_PATH="${ATTACH_PDF_PATH}"
 

@@ -156,6 +156,7 @@ class TecCaseConfigurationLinkBatchCaseTest {
     void linkBatchCaseRejectsRegistrationAlreadyLinkedElsewhere() {
         when(batchCaseRepository.exists(222L)).thenReturn(true);
         when(batchCaseRepository.find(222L)).thenReturn(batch(BatchOperation.REGISTRATION));
+        // Current registration only. An older registration's batch does not block this link.
         when(repository.findBatchCaseReference(111L)).thenReturn(888L);
 
         TecCase data = linkPayload("222", BatchOperation.REGISTRATION);

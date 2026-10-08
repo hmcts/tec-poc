@@ -41,7 +41,7 @@ class TecPrototypeTasksTest {
     @Test
     void shouldShowEditTe9ApplicationTaskWhenTe9Recorded() {
         TecCase tecCase = new TecCase();
-        tecCase.setApplicationForm(ApplicationForm.TE9);
+        tecCase.setTe9Details(te9());
 
         String markdown = TecPrototypeTasks.markdownFor(
             1L,
@@ -60,8 +60,8 @@ class TecPrototypeTasksTest {
     @Test
     void shouldShowEditTasksForEachFormOnTheCase() {
         TecCase tecCase = new TecCase();
-        tecCase.setApplicationForm(ApplicationForm.PE3);
-        tecCase.setTimeExtensionForm(TimeExtensionForm.TE7);
+        tecCase.setPe3Details(pe3());
+        tecCase.setTe7Details(te7());
 
         String markdown = TecPrototypeTasks.markdownFor(1L, CaseState.CASE_ISSUED, tecCase);
 
@@ -75,8 +75,8 @@ class TecPrototypeTasksTest {
     @Test
     void shouldOfferFormEditsAndValidateOotApplicationWhileAwaitingOotValidation() {
         TecCase tecCase = new TecCase();
-        tecCase.setApplicationForm(ApplicationForm.TE9);
-        tecCase.setTimeExtensionForm(TimeExtensionForm.TE7);
+        tecCase.setTe9Details(te9());
+        tecCase.setTe7Details(te7());
 
         String markdown = TecPrototypeTasks.markdownFor(
             1L,
@@ -96,8 +96,8 @@ class TecPrototypeTasksTest {
     @Test
     void shouldOfferPeFormEditsWhileAwaitingOotValidation() {
         TecCase tecCase = new TecCase();
-        tecCase.setApplicationForm(ApplicationForm.PE3);
-        tecCase.setTimeExtensionForm(TimeExtensionForm.PE2);
+        tecCase.setPe3Details(pe3());
+        tecCase.setPe2Details(pe2());
 
         String markdown = TecPrototypeTasks.markdownFor(
             1L,
@@ -116,8 +116,8 @@ class TecPrototypeTasksTest {
     @Test
     void shouldHideFormEditNextStepsWhileAwaitingLaOotResponse() {
         TecCase tecCase = new TecCase();
-        tecCase.setApplicationForm(ApplicationForm.TE9);
-        tecCase.setTimeExtensionForm(TimeExtensionForm.PE2);
+        tecCase.setTe9Details(te9());
+        tecCase.setPe2Details(pe2());
 
         String markdown = TecPrototypeTasks.markdownFor(
             1L,
@@ -144,5 +144,46 @@ class TecPrototypeTasksTest {
         );
 
         assertThat(markdown).contains("There are no active tasks for this case.");
+    }
+
+    @Test
+    void shouldOfferEditsForEveryFormPresentOnTheCase() {
+        TecCase tecCase = new TecCase();
+        tecCase.setTe9Details(te9());
+        tecCase.setPe3Details(pe3());
+        tecCase.setTe7Details(te7());
+        tecCase.setPe2Details(pe2());
+
+        String markdown = TecPrototypeTasks.markdownFor(1L, CaseState.CASE_ISSUED, tecCase);
+
+        assertThat(markdown)
+            .contains("editTe9Application")
+            .contains("editPe3Application")
+            .contains("editTe7Application")
+            .contains("editPe2Application");
+    }
+
+    private static Te9CaseDetails te9() {
+        Te9CaseDetails details = new Te9CaseDetails();
+        details.setForm(ApplicationForm.TE9);
+        return details;
+    }
+
+    private static Pe3CaseDetails pe3() {
+        Pe3CaseDetails details = new Pe3CaseDetails();
+        details.setForm(ApplicationForm.PE3);
+        return details;
+    }
+
+    private static Te7CaseDetails te7() {
+        Te7CaseDetails details = new Te7CaseDetails();
+        details.setForm(TimeExtensionForm.TE7);
+        return details;
+    }
+
+    private static Pe2CaseDetails pe2() {
+        Pe2CaseDetails details = new Pe2CaseDetails();
+        details.setForm(TimeExtensionForm.PE2);
+        return details;
     }
 }

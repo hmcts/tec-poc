@@ -102,6 +102,7 @@ class BatchCaseConfigurationLinkPcnCasesTest {
     void linkPcnCasesRejectsPcnAlreadyLinkedElsewhereForRegistration() {
         when(repository.find(999L)).thenReturn(batch(BatchOperation.REGISTRATION));
         when(tecCaseRepository.exists(111L)).thenReturn(true);
+        // Current registration only. An older registration's batch does not block this link.
         when(tecCaseRepository.findBatchCaseReference(111L)).thenReturn(888L);
 
         BatchCase data = caseLinksData("111");

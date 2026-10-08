@@ -122,6 +122,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getParties, "flagLauncher!=\"\"", "#ARGUMENT(Flags)");
 
         builder.tab("caseDetails", "Case details")
+            .field(TecCase::getPcnStem)
             .field(TecCase::getStatusDisplay)
             .label("registrationSection", null, "## Registration")
             .field(TecCase::getFileIdentifier)
@@ -152,114 +153,107 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getOotApplicationDecisionDisplay, PENDING_REFUSAL_DECISION)
             .label(
                 "applicationsSectionTe9InTime",
-                "applicationForm=\"TE9\" AND applicationType=\"inTime\"",
+                "te9Form=\"TE9\" AND te9Type=\"inTime\"",
                 "## Witness statement - In time"
             )
             .label(
                 "applicationsSectionTe9OutOfTime",
-                "applicationForm=\"TE9\" AND applicationType=\"outOfTime\"",
+                "te9Form=\"TE9\" AND te9Type=\"outOfTime\"",
                 "## Witness statement - Out of time"
             )
+            .field("te9FormValidationResultDisplay", "te9Form=\"TE9\"")
+            .field("te9DateReceived", "te9Form=\"TE9\"")
+            .field("te9Type", "te9Form=\"TE9\"")
+            .field("te9Te7Submitted", "te9Form=\"TE9\" AND te9Type=\"outOfTime\"")
+            .field("te9Form", "te9Form=\"TE9\"")
+            .field("te9PenaltyChargeNumber", "te9Form=\"TE9\"")
+            .field("te9VehicleRegistration", "te9Form=\"TE9\"")
+            .field("te9Applicant", "te9Form=\"TE9\"")
+            .field("te9LocationOfContravention", "te9Form=\"TE9\"")
+            .field("te9DateOfContravention", "te9Form=\"TE9\"")
+            .field("te9Title", "te9Form=\"TE9\"")
+            .field("te9FullName", "te9Form=\"TE9\"")
+            .field("te9CompanyName", "te9Form=\"TE9\"")
+            .field("te9Address", "te9Form=\"TE9\"")
+            .field("te9Postcode", "te9Form=\"TE9\"")
+            .field("te9Declaration", "te9Form=\"TE9\"")
+            .field("te9DatePaid", "te9Form=\"TE9\" AND te9Declaration=\"paidInFull\"")
+            .field("te9HowPaid", "te9Form=\"TE9\" AND te9Declaration=\"paidInFull\"")
+            .field("te9PaidTo", "te9Form=\"TE9\" AND te9Declaration=\"paidInFull\"")
             .label(
                 "applicationsSectionPe3InTime",
-                "applicationForm=\"PE3\" AND applicationType=\"inTime\"",
+                "pe3Form=\"PE3\" AND pe3Type=\"inTime\"",
                 "## Statutory declaration - In time"
             )
             .label(
                 "applicationsSectionPe3OutOfTime",
-                "applicationForm=\"PE3\" AND applicationType=\"outOfTime\"",
+                "pe3Form=\"PE3\" AND pe3Type=\"outOfTime\"",
                 "## Statutory declaration - Out of time"
             )
-            .field(
-                TecCase::getFormValidationResultDisplay,
-                "applicationForm=\"TE9\" OR applicationForm=\"PE3\""
-            )
-            .field(TecCase::getApplicationDateReceived, "applicationForm=\"TE9\" OR applicationForm=\"PE3\"")
-            .field(TecCase::getApplicationType, "applicationForm=\"TE9\" OR applicationForm=\"PE3\"")
-            .field(
-                TecCase::getApplicationTe7Submitted,
-                "(applicationForm=\"TE9\" OR applicationForm=\"PE3\") AND applicationType=\"outOfTime\""
-            )
-            .field(TecCase::getApplicationForm, "applicationForm=\"TE9\" OR applicationForm=\"PE3\"")
-            .field(
-                TecCase::getApplicationPenaltyChargeNumber,
-                "applicationForm=\"TE9\" OR applicationForm=\"PE3\""
-            )
-            .field(
-                TecCase::getApplicationVehicleRegistration,
-                "applicationForm=\"TE9\" OR applicationForm=\"PE3\""
-            )
-            .field(TecCase::getApplicationApplicant, "applicationForm=\"TE9\" OR applicationForm=\"PE3\"")
-            .field(
-                TecCase::getApplicationLocationOfContravention,
-                "applicationForm=\"TE9\" OR applicationForm=\"PE3\""
-            )
-            .field(
-                TecCase::getApplicationDateOfContravention,
-                "applicationForm=\"TE9\" OR applicationForm=\"PE3\""
-            )
-            .field(TecCase::getApplicationTitle, "applicationForm=\"TE9\" OR applicationForm=\"PE3\"")
-            .field(TecCase::getApplicationFullName, "applicationForm=\"TE9\" OR applicationForm=\"PE3\"")
-            .field(TecCase::getApplicationCompanyName, "applicationForm=\"TE9\" OR applicationForm=\"PE3\"")
-            .field(TecCase::getApplicationAddress, "applicationForm=\"TE9\" OR applicationForm=\"PE3\"")
-            .field(TecCase::getApplicationPostcode, "applicationForm=\"TE9\" OR applicationForm=\"PE3\"")
-            .field(TecCase::getApplicationDeclaration, "applicationForm=\"TE9\" OR applicationForm=\"PE3\"")
-            .field(TecCase::getApplicationReasonsGiven, "applicationForm=\"PE3\"")
-            .field(
-                TecCase::getApplicationDatePaid,
-                "(applicationForm=\"TE9\" OR applicationForm=\"PE3\") AND applicationDeclaration=\"paidInFull\""
-            )
-            .field(
-                TecCase::getApplicationHowPaid,
-                "(applicationForm=\"TE9\" OR applicationForm=\"PE3\") AND applicationDeclaration=\"paidInFull\""
-            )
-            .field(
-                TecCase::getApplicationPaidTo,
-                "(applicationForm=\"TE9\" OR applicationForm=\"PE3\") AND applicationDeclaration=\"paidInFull\""
-            )
+            .field("pe3FormValidationResultDisplay", "pe3Form=\"PE3\"")
+            .field("pe3DateReceived", "pe3Form=\"PE3\"")
+            .field("pe3Type", "pe3Form=\"PE3\"")
+            .field("pe3Te7Submitted", "pe3Form=\"PE3\" AND pe3Type=\"outOfTime\"")
+            .field("pe3Form", "pe3Form=\"PE3\"")
+            .field("pe3PenaltyChargeNumber", "pe3Form=\"PE3\"")
+            .field("pe3VehicleRegistration", "pe3Form=\"PE3\"")
+            .field("pe3Applicant", "pe3Form=\"PE3\"")
+            .field("pe3LocationOfContravention", "pe3Form=\"PE3\"")
+            .field("pe3DateOfContravention", "pe3Form=\"PE3\"")
+            .field("pe3Title", "pe3Form=\"PE3\"")
+            .field("pe3FullName", "pe3Form=\"PE3\"")
+            .field("pe3CompanyName", "pe3Form=\"PE3\"")
+            .field("pe3Address", "pe3Form=\"PE3\"")
+            .field("pe3Postcode", "pe3Form=\"PE3\"")
+            .field("pe3Declaration", "pe3Form=\"PE3\"")
+            .field("pe3ReasonsGiven", "pe3Form=\"PE3\"")
+            .field("pe3DatePaid", "pe3Form=\"PE3\" AND pe3Declaration=\"paidInFull\"")
+            .field("pe3HowPaid", "pe3Form=\"PE3\" AND pe3Declaration=\"paidInFull\"")
+            .field("pe3PaidTo", "pe3Form=\"PE3\" AND pe3Declaration=\"paidInFull\"")
             .label(
                 "timeExtensionSectionTe7OutOfTime",
-                "timeExtensionForm=\"TE7\" AND timeExtensionPermissionType=\"outsideTheGivenTime\"",
+                "te7Form=\"TE7\" AND te7PermissionType=\"outsideTheGivenTime\"",
                 "## Application to file out of time"
             )
             .label(
                 "timeExtensionSectionTe7Extension",
-                "timeExtensionForm=\"TE7\" AND timeExtensionPermissionType=\"forMoreTime\"",
+                "te7Form=\"TE7\" AND te7PermissionType=\"forMoreTime\"",
                 "## Application for extension of time"
             )
+            .field("te7FormValidationResultDisplay", "te7Form=\"TE7\"")
+            .field("te7Form", "te7Form=\"TE7\"")
+            .field("te7PenaltyChargeNumber", "te7Form=\"TE7\"")
+            .field("te7VehicleRegistration", "te7Form=\"TE7\"")
+            .field("te7Title", "te7Form=\"TE7\"")
+            .field("te7OtherTitle", "te7Form=\"TE7\" AND te7Title=\"Other\"")
+            .field("te7FullName", "te7Form=\"TE7\"")
+            .field("te7CompanyName", "te7Form=\"TE7\"")
+            .field("te7Address", "te7Form=\"TE7\"")
+            .field("te7Postcode", "te7Form=\"TE7\"")
+            .field("te7PermissionType", "te7Form=\"TE7\"")
+            .field("te7ReasonsGiven", "te7Form=\"TE7\"")
+            .field("te7SignedAndDated", "te7Form=\"TE7\"")
+            .field("te7SignedBy", "te7Form=\"TE7\"")
+            .field("te7DateSigned", "te7Form=\"TE7\"")
+            .field("te7PrintFullName", "te7Form=\"TE7\"")
             .label(
                 "timeExtensionSectionPe2",
-                "timeExtensionForm=\"PE2\"",
+                "pe2Form=\"PE2\"",
                 "## Application to file out of time"
             )
-            .field(
-                TecCase::getTimeExtensionFormValidationResultDisplay,
-                "timeExtensionForm=\"TE7\" OR timeExtensionForm=\"PE2\""
-            )
-            .field(TecCase::getTimeExtensionForm, "timeExtensionForm=\"TE7\" OR timeExtensionForm=\"PE2\"")
-            .field(
-                TecCase::getTimeExtensionPenaltyChargeNumber,
-                "timeExtensionForm=\"TE7\" OR timeExtensionForm=\"PE2\""
-            )
-            .field(
-                TecCase::getTimeExtensionVehicleRegistration,
-                "timeExtensionForm=\"TE7\" OR timeExtensionForm=\"PE2\""
-            )
-            .field(TecCase::getTimeExtensionApplicant, "timeExtensionForm=\"PE2\"")
-            .field(TecCase::getTimeExtensionLocationOfContravention, "timeExtensionForm=\"PE2\"")
-            .field(TecCase::getTimeExtensionDateOfContravention, "timeExtensionForm=\"PE2\"")
-            .field(TecCase::getTimeExtensionTitle, "timeExtensionForm=\"TE7\"")
-            .field(TecCase::getTimeExtensionOtherTitle, "timeExtensionForm=\"TE7\" AND timeExtensionTitle=\"Other\"")
-            .field(TecCase::getTimeExtensionFullName, "timeExtensionForm=\"TE7\" OR timeExtensionForm=\"PE2\"")
-            .field(TecCase::getTimeExtensionCompanyName, "timeExtensionForm=\"TE7\"")
-            .field(TecCase::getTimeExtensionAddress, "timeExtensionForm=\"TE7\" OR timeExtensionForm=\"PE2\"")
-            .field(TecCase::getTimeExtensionPostcode, "timeExtensionForm=\"TE7\" OR timeExtensionForm=\"PE2\"")
-            .field(TecCase::getTimeExtensionPermissionType, "timeExtensionForm=\"TE7\"")
-            .field(TecCase::getTimeExtensionReasonsGiven, "timeExtensionForm=\"TE7\" OR timeExtensionForm=\"PE2\"")
-            .field(TecCase::getTimeExtensionSignedAndDated, "timeExtensionForm=\"TE7\" OR timeExtensionForm=\"PE2\"")
-            .field(TecCase::getTimeExtensionSignedBy, "timeExtensionForm=\"TE7\"")
-            .field(TecCase::getTimeExtensionDateSigned, "timeExtensionForm=\"TE7\" OR timeExtensionForm=\"PE2\"")
-            .field(TecCase::getTimeExtensionPrintFullName, "timeExtensionForm=\"TE7\"")
+            .field("pe2FormValidationResultDisplay", "pe2Form=\"PE2\"")
+            .field("pe2Form", "pe2Form=\"PE2\"")
+            .field("pe2PenaltyChargeNumber", "pe2Form=\"PE2\"")
+            .field("pe2VehicleRegistration", "pe2Form=\"PE2\"")
+            .field("pe2Applicant", "pe2Form=\"PE2\"")
+            .field("pe2LocationOfContravention", "pe2Form=\"PE2\"")
+            .field("pe2DateOfContravention", "pe2Form=\"PE2\"")
+            .field("pe2FullName", "pe2Form=\"PE2\"")
+            .field("pe2Address", "pe2Form=\"PE2\"")
+            .field("pe2Postcode", "pe2Form=\"PE2\"")
+            .field("pe2ReasonsGiven", "pe2Form=\"PE2\"")
+            .field("pe2SignedAndDated", "pe2Form=\"PE2\"")
+            .field("pe2DateSigned", "pe2Form=\"PE2\"")
             .label(
                 "warrantAuthorisationsSection",
                 "warrantAuthorisations!=\"\"",
@@ -297,13 +291,13 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field("previousRegistrationsMarkdown", NEVER_SHOW);
 
         builder.searchInputFields()
-            .field(TecCase::getPenaltyChargeNumber, "Penalty charge number")
+            .field(TecCase::getPcnStem, "Penalty charge number stem")
             .field(TecCase::getLocalAuthority, "Local authority");
 
         builder.searchResultFields()
             .caseReferenceField()
             .field("[STATE]", "State")
-            .field(TecCase::getPenaltyChargeNumber, "Penalty charge number")
+            .field(TecCase::getPcnStem, "PCN stem")
             .field(TecCase::getLocalAuthority, "Local authority")
             .field(TecCase::getRespondentDetails1, "Respondent details 1")
             .field(TecCase::getRespondentDetails2, "Respondent details 2")
@@ -311,12 +305,12 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .field(TecCase::getVehicleRegistrationNumber, "Vehicle registration number");
 
         builder.workBasketInputFields()
-            .field(TecCase::getPenaltyChargeNumber, "Penalty charge number")
+            .field(TecCase::getPcnStem, "Penalty charge number stem")
             .field(TecCase::getLocalAuthority, "Local authority");
 
         builder.workBasketResultFields()
             .caseReferenceField()
-            .field(TecCase::getPenaltyChargeNumber, "Penalty charge number")
+            .field(TecCase::getPcnStem, "PCN stem")
             .field(TecCase::getLocalAuthority, "Local authority")
             .field(TecCase::getRespondentDetails1, "Respondent details 1")
             .field(TecCase::getVehicleRegistrationNumber, "Vehicle registration number")
@@ -401,11 +395,11 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             )
             .mandatory(TecCase::getOotRefusalReviewDecision);
 
-        builder.decentralisedEvent("editTe9Application", this::editTe9Application)
+        builder.decentralisedEvent("editTe9Application", this::editTe9Application, this::startEditTe9)
             .forStates(formEditStates())
             .name("Edit TE9 application")
             .description("Update TE9 application details")
-            .showCondition("applicationForm=\"TE9\"")
+            .showCondition("te9Form=\"TE9\"")
             .grant(Permission.CRU, UserRole.CLERK)
             .fields()
             .optional(TecCase::getApplicationDateReceived)
@@ -425,11 +419,11 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .optional(TecCase::getApplicationHowPaid, "applicationDeclaration=\"paidInFull\"")
             .optional(TecCase::getApplicationPaidTo, "applicationDeclaration=\"paidInFull\"");
 
-        builder.decentralisedEvent("editPe3Application", this::editPe3Application)
+        builder.decentralisedEvent("editPe3Application", this::editPe3Application, this::startEditPe3)
             .forStates(formEditStates())
             .name("Edit PE3 application")
             .description("Update PE3 application details")
-            .showCondition("applicationForm=\"PE3\"")
+            .showCondition("pe3Form=\"PE3\"")
             .grant(Permission.CRU, UserRole.CLERK)
             .fields()
             .optional(TecCase::getApplicationDateReceived)
@@ -450,11 +444,11 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .optional(TecCase::getApplicationHowPaid, "applicationDeclaration=\"paidInFull\"")
             .optional(TecCase::getApplicationPaidTo, "applicationDeclaration=\"paidInFull\"");
 
-        builder.decentralisedEvent("editTe7Application", this::editTe7Application)
+        builder.decentralisedEvent("editTe7Application", this::editTe7Application, this::startEditTe7)
             .forStates(formEditStates())
             .name("Edit TE7 application")
             .description("Update TE7 time-extension details")
-            .showCondition("timeExtensionForm=\"TE7\"")
+            .showCondition("te7Form=\"TE7\"")
             .grant(Permission.CRU, UserRole.CLERK)
             .fields()
             .optional(TecCase::getTimeExtensionVehicleRegistration)
@@ -471,11 +465,11 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .optional(TecCase::getTimeExtensionDateSigned)
             .optional(TecCase::getTimeExtensionPrintFullName);
 
-        builder.decentralisedEvent("editPe2Application", this::editPe2Application)
+        builder.decentralisedEvent("editPe2Application", this::editPe2Application, this::startEditPe2)
             .forStates(formEditStates())
             .name("Edit PE2 application")
             .description("Update PE2 time-extension details")
-            .showCondition("timeExtensionForm=\"PE2\"")
+            .showCondition("pe2Form=\"PE2\"")
             .grant(Permission.CRU, UserRole.CLERK)
             .fields()
             .optional(TecCase::getTimeExtensionVehicleRegistration)
@@ -558,6 +552,27 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .optional(TecCase::getTimeExtensionSignedBy)
             .optional(TecCase::getTimeExtensionDateSigned)
             .optional(TecCase::getTimeExtensionPrintFullName);
+
+        builder.decentralisedEvent("addRegistration", this::addRegistration)
+            .forStates(CaseState.values())
+            .name("Add registration")
+            .showCondition(NEVER_SHOW)
+            .grant(Permission.CRUD, UserRole.SYSTEM)
+            .fields()
+            .mandatory(TecCase::getFileIdentifier)
+            .mandatory(TecCase::getBatchIdentifier)
+            .mandatory(TecCase::getPenaltyChargeNumber)
+            .mandatory(TecCase::getLocalAuthority)
+            .mandatory(TecCase::getRespondentDetails1)
+            .mandatory(TecCase::getRespondentDetails2)
+            .mandatory(TecCase::getRespondentDetails3)
+            .optional(TecCase::getRespondentDetails4)
+            .optional(TecCase::getRespondentDetails5)
+            .optional(TecCase::getRespondentDetails6)
+            .mandatory(TecCase::getVehicleRegistrationNumber)
+            .mandatory(TecCase::getNatureOfOffence)
+            .mandatory(TecCase::getDateChargeCertificateServed)
+            .mandatory(TecCase::getAmountDue);
 
         builder.decentralisedEvent("applyWarrantAuthorisation", this::applyWarrantAuthorisation)
             .forStates(CaseState.values())
@@ -651,8 +666,61 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
     }
 
     private SubmitResponse<CaseState> createTecCase(EventPayload<TecCase, CaseState> event) {
+        PcnNumbers.requireInitialRegistration(event.caseData().getPenaltyChargeNumber());
+        event.caseData().setPcnStem(PcnNumbers.stem(event.caseData().getPenaltyChargeNumber()));
         repository.create(event.caseReference(), event.caseData());
         return response(CaseState.PENDING_CASE_ISSUED);
+    }
+
+    private SubmitResponse<CaseState> addRegistration(EventPayload<TecCase, CaseState> event) {
+        String expected = PcnNumbers.nextRegistrationPcn(
+            repository.currentRegistrationPcn(event.caseReference())
+        );
+        if (!expected.equals(event.caseData().getPenaltyChargeNumber())) {
+            throw new IllegalArgumentException("New registration PCN must be " + expected);
+        }
+        repository.insertRegistration(event.caseReference(), event.caseData());
+        return SubmitResponse.defaultResponse();
+    }
+
+    private TecCase startEditTe9(EventPayload<TecCase, CaseState> event) {
+        Te9CaseDetails details = repository.find(event.caseReference()).getTe9Details();
+        if (details == null) {
+            throw new IllegalArgumentException("No TE9 record on case " + event.caseReference());
+        }
+        TecCase form = new TecCase();
+        details.copyToApplication(form);
+        return form;
+    }
+
+    private TecCase startEditPe3(EventPayload<TecCase, CaseState> event) {
+        Pe3CaseDetails details = repository.find(event.caseReference()).getPe3Details();
+        if (details == null) {
+            throw new IllegalArgumentException("No PE3 record on case " + event.caseReference());
+        }
+        TecCase form = new TecCase();
+        details.copyToApplication(form);
+        return form;
+    }
+
+    private TecCase startEditTe7(EventPayload<TecCase, CaseState> event) {
+        Te7CaseDetails details = repository.find(event.caseReference()).getTe7Details();
+        if (details == null) {
+            throw new IllegalArgumentException("No TE7 record on case " + event.caseReference());
+        }
+        TecCase form = new TecCase();
+        details.copyToTimeExtension(form);
+        return form;
+    }
+
+    private TecCase startEditPe2(EventPayload<TecCase, CaseState> event) {
+        Pe2CaseDetails details = repository.find(event.caseReference()).getPe2Details();
+        if (details == null) {
+            throw new IllegalArgumentException("No PE2 record on case " + event.caseReference());
+        }
+        TecCase form = new TecCase();
+        details.copyToTimeExtension(form);
+        return form;
     }
 
     private SubmitResponse<CaseState> registrationPaymentSucceeded(EventPayload<TecCase, CaseState> event) {

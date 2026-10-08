@@ -379,7 +379,7 @@ public class BatchCaseConfiguration implements CCDConfig<BatchCase, BatchCaseSta
     /**
      * Records standard {@code caseLinks} on the batch so CCD's {@code case_link} table
      * (and ExUI "linked to" / PCN "linked from") include each PCN. Registration batches
-     * also set {@code tec_case.batch_case_reference}; other batch types use
+     * also set the current registration's batch link; other batch types use
      * {@code tec_batch_pcn_link}.
      */
     private SubmitResponse<BatchCaseState> linkPcnCases(EventPayload<BatchCase, BatchCaseState> event) {

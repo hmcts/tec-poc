@@ -217,6 +217,11 @@ print_counts() {
   echo "${label}"
   echo "  tec.public:"
   echo "    tec_case:              $(count_or_zero tec 'SELECT count(*) FROM tec_case')"
+  echo "    tec_case_registration: $(count_or_zero tec 'SELECT count(*) FROM tec_case_registration')"
+  echo "    tec_case_te9:          $(count_or_zero tec 'SELECT count(*) FROM tec_case_te9')"
+  echo "    tec_case_te7:          $(count_or_zero tec 'SELECT count(*) FROM tec_case_te7')"
+  echo "    tec_case_pe3:          $(count_or_zero tec 'SELECT count(*) FROM tec_case_pe3')"
+  echo "    tec_case_pe2:          $(count_or_zero tec 'SELECT count(*) FROM tec_case_pe2')"
   echo "    tec_case_document:     $(count_or_zero tec 'SELECT count(*) FROM tec_case_document')"
   echo "    tec_case_warrant_authorisation: $(count_or_zero tec 'SELECT count(*) FROM tec_case_warrant_authorisation')"
   echo "    tec_batch:             $(count_or_zero tec 'SELECT count(*) FROM tec_batch')"
@@ -266,6 +271,12 @@ clear_tec_database() {
 TRUNCATE TABLE
   tec_case_document,
   tec_case_warrant_authorisation,
+  tec_case_general_application,
+  tec_case_registration,
+  tec_case_te9,
+  tec_case_te7,
+  tec_case_pe3,
+  tec_case_pe2,
   tec_batch_pcn_link,
   tec_batch_document,
   tec_case,

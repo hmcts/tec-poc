@@ -57,25 +57,25 @@ TEC decentralised runtime (tec.ccd schema)
     |
     | invoke event handler or CaseView (TecCaseView / BatchCaseView / ExceptionCaseView)
     v
-TEC business persistence (tec.public.tec_case / tec_batch / tec_batch_pcn_link / tec_exception_case)
+TEC business persistence (tec.public.tec_case / tec_case_registration / tec_case_te9 / tec_case_te7 / tec_case_pe3 / tec_case_pe2 / tec_batch / tec_batch_pcn_link / tec_exception_case)
 ```
 
 ## TEC business table
 
-Flyway migration `V1__create_tec_case.sql` creates one application-owned table. It stores:
+Flyway migration `V1__create_tec_case.sql` creates the case row. Flyway `V24__split_registration_and_forms.sql`
+moves registration and each received form off that row.
 
-- the CCD case reference as its primary key;
-- file, batch and penalty-charge identifiers;
-- six respondent detail lines;
-- vehicle, offence, certificate-date and amount fields;
-- payment status/reference and closure reason; and
-- registration document/date.
+`tec_case` keeps the CCD case reference, the PCN stem, the case-list copies written at create
+(local authority, respondent details 1–3, vehicle registration), and the shared form validation result.
 
-`payment_status` defaults to `PENDING`. The migration enforces identifier formats and matching authority prefixes,
-uppercase respondent details, vehicle/offence/date formats, a unique file/batch/PCN tuple, and an amount range of
-0–999999 pence. The HTTP request applies corresponding validation before calling CCD.
+`tec_case_registration` stores each registration: file and batch identifiers, optional registration
+batch link, full PCN (unique), respondent lines, vehicle, offence, certificate date, amount, payment,
+and registration document/date. `payment_status` defaults to `PENDING`. Checks enforce identifier
+formats, matching authority prefixes, uppercase respondent details, and an amount range of 0–999999 pence.
 
-The table deliberately represents the current single-table POC, not a future normalised datafile/batch/PCN model.
+`tec_case_te9`, `tec_case_te7`, `tec_case_pe3`, and `tec_case_pe2` each store one received form,
+including that form's own penalty charge number. The same form PCN may repeat. Case details and edit
+events use the row with the highest PCN suffix, then the latest `created_at`.
 
 Flyway migration `V10__create_tec_batch.sql` adds `public.tec_batch` for case type `TEC_BATCH`
 (batch identifier, PCN count, operation, received via / received at, local authority) plus
@@ -90,13 +90,15 @@ Batch schema updates since then:
 | `V14__batch_file_identifier.sql` | Adds unique `file_identifier` (authority prefix must match batch identifier) |
 | `V15__batch_submitter_email.sql` | Adds mandatory `submitter_email` |
 | `V16__drop_batch_validation_result.sql` | Drops `batch_validation_result` / display columns |
-| `V17__pcn_batch_case_link.sql` | Adds optional `tec_case.batch_case_reference` FK to `tec_batch` (**registration** membership only; Case details **Batch case**) |
+| `V17__pcn_batch_case_link.sql` | Adds optional registration batch FK (later moved onto `tec_case_registration` by `V24`) |
 | `V20__create_tec_batch_pcn_link.sql` | Adds `tec_batch_pcn_link` for non-registration batch ↔ PCN membership (warrant auth, etc.) |
 | `V21__drop_tec_enforcement_case.sql` | Drops `tec_enforcement_case` / `tec_enforcement_case_document` and `tec_case.enforcement_case_reference` |
+| `V24__split_registration_and_forms.sql` | Adds `tec_case.pcn_stem` and `tec_case_registration`, `tec_case_te9`, `tec_case_te7`, `tec_case_pe3`, `tec_case_pe2`; drops the moved columns from `tec_case` |
 
-`BatchCaseRepository` owns the batch tables including `tec_batch_pcn_link`. Registration membership is the
-`tec_case.batch_case_reference` FK; other batch types store membership only in `tec_batch_pcn_link` so a PCN
-can keep its registration batch and also belong to later warrant-auth (or other) batches.
+`BatchCaseRepository` owns the batch tables including `tec_batch_pcn_link`. Registration membership is
+`tec_case_registration.batch_case_reference` (one batch per registration). Other batch types store
+membership only in `tec_batch_pcn_link`, so a PCN can keep its registration batches and also belong to
+later warrant-auth (or other) batches.
 `BatchCaseView` rebuilds Linked Cases from both sources (union). CCD label **Email received at** maps to column `received_at`;
 the Batch details tab shows it only when received via is email. `ExceptionCaseRepository` owns
 `tec_exception_case`; Form validation result / Associated TEC case displays are view-only placeholders
@@ -121,22 +123,24 @@ COMMIT
 If the handler fails, the local business and lifecycle changes can roll back together without a distributed
 transaction across service-owned databases.
 
-Application code should not treat the `ccd` schema as its business model. `TecCaseRepository` reads and writes only
-`public.tec_case`; the embedded runtime owns the `ccd` schema.
+Application code should not treat the `ccd` schema as its business model. `TecCaseRepository` reads and writes
+`public.tec_case` and the registration and form tables; the embedded runtime owns the `ccd` schema.
 
 ## Reads and projections
 
 The business table is the source of current PCN field values. When CCD asks TEC for a case, the runtime calls
-`TecCaseView`, which uses only the CCD case reference to load `public.tec_case` and return a `TecCase` projection.
+`TecCaseView`, which uses only the CCD case reference to load `public.tec_case` and the current registration and form rows, and return a `TecCase` projection.
 
 This separates the concerns:
 
 | Concern | Source of truth |
 | --- | --- |
-| PCN business facts | `tec.public.tec_case` |
+| PCN case identity and list fields | `tec.public.tec_case` |
+| Registrations | `tec.public.tec_case_registration` |
+| Received TE9 / TE7 / PE3 / PE2 | `tec.public.tec_case_te9` / `tec_case_te7` / `tec_case_pe3` / `tec_case_pe2` |
 | Batch business facts | `tec.public.tec_batch` / `tec.public.tec_batch_document` |
 | Non-registration batch ↔ PCN membership | `tec.public.tec_batch_pcn_link` |
-| Registration batch ↔ PCN membership | `tec.public.tec_case.batch_case_reference` |
+| Registration batch ↔ PCN membership | `tec.public.tec_case_registration.batch_case_reference` |
 | Exception business facts | `tec.public.tec_exception_case` |
 | Decentralised CCD lifecycle and history | Runtime-owned tables in `tec.ccd` |
 | Central CCD orchestration and routing | CCD Data Store's `datastore` database |

@@ -180,7 +180,7 @@ curl --request POST http://localhost:4013/pcn-cases \
   --data '{
     "fileIdentifier": "RTE12345",
     "batchIdentifier": "RTE123456",
-    "penaltyChargeNumber": "TE1234567A8",
+    "penaltyChargeNumber": "TE1234567A0",
     "localAuthority": "westminster",
     "respondentDetails1": "ALEX EXAMPLE",
     "respondentDetails2": "1 EXAMPLE STREET",
@@ -347,9 +347,9 @@ Hyphens in either case reference are optional. Both paths:
 
 1. Submit PCN `linkBatchCase` (`batchLinkCase` CaseLink to `TEC_BATCH` + `batchLinkType` matching
    the batch operation — not Case details `batchCase`) — registration sets Case details **Batch
-   case** via `tec_case.batch_case_reference`; other types record membership in `tec_batch_pcn_link`
-   only and leave the registration **Batch case** link unchanged. History records the event either
-   way. Linking is additive: existing registration / Linked Cases entries remain.
+   case** via the current `tec_case_registration.batch_case_reference`; other types record membership
+   in `tec_batch_pcn_link` only. A case may have one registration batch per registration. History
+   records the event either way. Linking is additive: existing registration / Linked Cases entries remain.
 2. Submit batch `linkPcnCases` with the full `caseLinks` collection and Reason `CLRC007` (Other);
    `OtherDescription` depends on the batch type (for example **Linked as part of a batch of
    registrations** or **… warrant auth requests**) — ExUI Linked Cases shows the PCN under the
@@ -371,8 +371,9 @@ With `bootWithCCD` running, generate application data for an existing case, subm
 
 Hyphens in the case reference are ignored. Type may be `in time` / `out of time` (or
 `in-time` / `out-of-time`, `inTime` / `outOfTime`). Form must be `TE9` or `PE3`.
-Attached PDFs are named like `Witness statement - Out of time.pdf` or
-`Statutory declaration - In time.pdf`.
+Attached PDFs include the current registration PCN, for example
+`Witness statement - Out of time - AB0531612A0.pdf` or
+`Statutory declaration - Out of time - AB0531612A2.pdf`.
 
 The script copies PCN, VRN, name and address from the case where possible and randomly
 fills the remaining application fields. Set `SEED=<n>` for reproducible random values.
@@ -391,9 +392,21 @@ With `bootWithCCD` running, generate time-extension data for an existing case, s
 
 Hyphens in the case reference are ignored. Form must be `TE7` or `PE2`. Set `SEED=<n>` for
 reproducible random values. The script reuses the same Python venv as
-`generate-application.sh`. Attached PDFs are named from the section heading (for TE7, based on
-permission sought: `Application to file out of time.pdf` or
-`Application for extension of time.pdf`).
+`generate-application.sh`. Attached PDFs are named from the section heading plus the current
+registration PCN (for TE7, the heading depends on permission sought), for example
+`Application to file out of time - AB0531612A2.pdf` or
+`Application for extension of time - AB0531612A0.pdf`.
+
+### Add a registration (local)
+
+With `bootWithCCD` running, add another registration to an existing PCN. The script creates a
+registration batch (`PCN_COUNT=1`), submits `addRegistration` with the next PCN suffix, and links
+that batch. Respondent details, local authority, vehicle, offence, certificate date, and amount
+are copied from the case. Case-list fields stay as they were at create.
+
+```bash
+./bin/add-tec-registration.sh <case-reference>
+```
 
 ### Enter an N244 general application (local)
 

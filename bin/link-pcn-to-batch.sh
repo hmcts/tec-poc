@@ -33,7 +33,7 @@ Usage: ${0} <pcn-case-reference> <batch-case-reference>
 Link a TEC PCN case to a TEC Batch case:
   1. Load the batch to read its operation (batch type)
   2. PCN event linkBatchCase with batchLinkCase + batchLinkType
-     - registration → sets tec_case.batch_case_reference (Case details Batch case)
+     - registration → sets the current registration's batch link (Case details Batch case)
      - other types → tec_batch_pcn_link membership only (does not change Batch case)
   3. Batch event linkPcnCases with the full caseLinks collection so ExUI
      shows the PCN under the batch's "linked to" list and the batch under

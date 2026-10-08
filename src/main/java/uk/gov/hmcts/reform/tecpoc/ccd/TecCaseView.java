@@ -53,8 +53,18 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
         String validationDisplay = validationResult == null
             ? FORM_VALIDATION_NOT_RECORDED
             : validationResult.getLabel();
-        tecCase.setFormValidationResultDisplay(validationDisplay);
-        tecCase.setTimeExtensionFormValidationResultDisplay(validationDisplay);
+        if (tecCase.getTe9Details() != null) {
+            tecCase.getTe9Details().setFormValidationResultDisplay(validationDisplay);
+        }
+        if (tecCase.getPe3Details() != null) {
+            tecCase.getPe3Details().setFormValidationResultDisplay(validationDisplay);
+        }
+        if (tecCase.getTe7Details() != null) {
+            tecCase.getTe7Details().setFormValidationResultDisplay(validationDisplay);
+        }
+        if (tecCase.getPe2Details() != null) {
+            tecCase.getPe2Details().setFormValidationResultDisplay(validationDisplay);
+        }
         if (tecCase.getLocalAuthority() != null) {
             tecCase.setCaseAccessCategory(tecCase.getLocalAuthority().getCode());
         }

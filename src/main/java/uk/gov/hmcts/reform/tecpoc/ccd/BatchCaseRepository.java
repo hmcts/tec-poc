@@ -107,14 +107,14 @@ public class BatchCaseRepository {
     }
 
     /**
-     * PCNs linked to this batch via registration FK and/or {@code tec_batch_pcn_link}.
+     * PCNs linked to this batch via a registration row and/or {@code tec_batch_pcn_link}.
      */
     public List<Long> findLinkedPcnCaseReferences(long batchCaseReference) {
         return database.queryForList("""
             select case_reference
               from (
                 select case_reference
-                  from tec_case
+                  from tec_case_registration
                  where batch_case_reference = :batchCaseReference
                 union
                 select pcn_case_reference as case_reference
