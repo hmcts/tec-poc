@@ -22,11 +22,9 @@ AA9999999X9
 | `X` | 1 character | Mod 11 check digit (`0`–`9`, or `A` when the remainder is 10) |
 | `9` | 1 digit | Numeric suffix |
 
-The suffix marks a reissue of the same charge and is **not** included in the check-digit
-calculation. Numbers from `generate-pcn-number.sh` always use suffix `0`. A supplied number may
-use a higher suffix; `create-tec-case.sh` then links that case to the preceding suffix. A 2-letter
-authority produces 11 characters (`WE705998990`). A 3-letter authority produces 12
-(`WCC123456700`).
+In this POC the suffix is always `0`. It marks a reissue of the same charge and is **not** included
+in the check-digit calculation. A 2-letter authority produces 11 characters (`WE705998990`). A
+3-letter authority produces 12 (`WCC123456700`).
 
 The create API accepts `^[A-Z]{2,3}[0-9]{7}[0-9A][0-9]$`. On a PCN case the file identifier
 (`R` + authority id + 5 digits) and batch identifier (`R` + authority id + 6 digits) must use the
@@ -54,9 +52,6 @@ omitted from the map.
 
 Set `PENALTY_CHARGE_NUMBER` on `create-tec-case.sh` to supply a number. File and batch identifiers
 then follow that number's authority id unless `FILE_IDENTIFIER` or `BATCH_IDENTIFIER` is set.
-If that number's suffix is greater than `0`, the new case is linked to the case for the preceding
-suffix (`AB0531612A1` to `AB0531612A0`). That preceding case must already exist. See
-[Local scripts](/local-scripts.html).
 
 ## Check digit
 

@@ -71,8 +71,8 @@ Jurisdiction id is `TEC`. Case types:
 | `TEC_EXCEPTION` | TEC Exception | Exception items (unmatched / irrelevant submissions) |
 
 A PCN case's **Penalty charge number** is the authority id, a 7-digit number, a mod 11 check digit,
-and a numeric suffix. Generated numbers use suffix `0`. File identifier and batch identifier on
-that case use the same authority id. Format and calculation: [Penalty charge numbers](/pcn-number.html).
+and a suffix of `0`. File identifier and batch identifier on that case use the same authority id.
+Format and calculation: [Penalty charge numbers](/pcn-number.html).
 
 All three types reuse overlapping roles (exceptions shutter LOCAL_AUTHORITY):
 
@@ -249,9 +249,7 @@ SDK does not prepend it):
 - **Linked Cases**: ExUI `ComponentLauncher` + `caseLinks` collection (`#ARGUMENT(LinkedCases)`).
   Batch links are owned by the batch case (see below); a PCN can appear under ExUI **linked from**
   for more than one batch (e.g. registration and warrant auth) after each batch's `linkPcnCases`
-  updates CCD's `case_link` table. When a PCN suffix is greater than `0`, `TecCaseView` also puts
-  the preceding registration in this case's `caseLinks` (standard link, reason `CLRC007`). CCD
-  rebuilds `case_link` from that collection on every save. Case details **Batch case** (`batchCase` /
+  updates CCD's `case_link` table. Case details **Batch case** (`batchCase` /
   `batch_case_reference`) remains the registration batch only.
 - **Payment History**: CCD tab hosting the shared `CasePaymentHistoryViewer` field (ccpay case
   transactions UI). Local content depends on Payments being wired for TEC.
