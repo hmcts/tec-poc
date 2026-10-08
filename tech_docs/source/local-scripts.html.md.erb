@@ -50,7 +50,7 @@ Used by other scripts; rarely invoked directly.
 | --- | --- | --- |
 | `bin/create-tec-batch.sh` | `<local-authority> [batch-type]` | Create one `TEC_BATCH` via `POST /batches`. No args shows help (unless `LOCAL_AUTHORITY` is set). Batch types: `registration`, `warrantAuthRequests`, `warrantReissueRequests`, `outOfTimeDecisions`, `changeOfAddress`, `caseClosureRequests`, `transferRequest` |
 | `bin/create-tec-batches.sh` | `<count> [batch-type]` | Create many batches (rotates authority / type / state unless fixed). No args shows help |
-| `bin/create-tec-case.sh` | `<batch-case-reference\|->` | Create one `TEC` PCN. The PCN comes from `generate-pcn-number.sh` using `LOCAL_AUTHORITY`'s TEC id (default Westminster `WE`). Pass `-` for unlinked; pass a batch ref (or `BATCH_CASE_REFERENCE`) to link after create |
+| `bin/create-tec-case.sh` | `<batch-case-reference\|->` | Create one `TEC` PCN. The PCN comes from `generate-pcn-number.sh` using `LOCAL_AUTHORITY`'s TEC id (default Westminster `WE`), or from `PENALTY_CHARGE_NUMBER`. Pass `-` for no batch link; pass a batch ref (or `BATCH_CASE_REFERENCE`) to link the batch after create. A supplied PCN whose suffix is greater than `0` is also linked to the case for the preceding suffix |
 | `bin/create-tec-cases.sh` | `<batch-case-reference\|->` | Bulk randomised PCNs (`CASE_COUNT`, default 20). Each PCN uses that case's TEC authority id |
 | `bin/create-gm-tec-cases.sh` | `<batch-case-reference\|->` | PCNs for each Greater Manchester authority (`CASES_PER_AUTHORITY`, default 10), via `create-tec-case.sh` |
 | `bin/create-tec-exception-case.sh` | (optional env overrides) | Create one `TEC_EXCEPTION` via `POST /exception-cases` |
@@ -81,6 +81,21 @@ the mod 11 check digit are on [Penalty charge numbers](/pcn-number.html). The wo
 ./bin/generate-pcn-number.sh LR 2468037
 ./bin/generate-pcn-number.sh WE
 LOCAL_AUTHORITY=manchesterCityCouncil ./bin/create-tec-case.sh -
+```
+
+Set `PENALTY_CHARGE_NUMBER` to supply a PCN. File and batch identifiers then use that number's
+authority id unless `FILE_IDENTIFIER` or `BATCH_IDENTIFIER` is set. When the supplied suffix is
+greater than `0`, the script looks up the case for the immediately preceding suffix and links the
+new case to it after create (`AB0531612A1` links to the case for `AB0531612A0`). The preceding
+case must already exist, and there must be exactly one. The script exits before creating the PCN
+if that lookup fails. Generated numbers always use suffix `0`, so they are not linked this way.
+The link is a standard CCD case link (reason `CLRC007`, description "Previous registration").
+`TecCaseView` returns the same predecessor on later reads, because CCD rebuilds `case_link` from
+`caseLinks` on every save. Lookup uses the `tec` database (`DB_HOST`, `DB_PORT`, `DB_PASSWORD`,
+or the local shared-database container when `psql` is not installed).
+
+```bash
+PENALTY_CHARGE_NUMBER=AB0531612A1 ./bin/create-tec-case.sh -
 ```
 
 ## Link and transition

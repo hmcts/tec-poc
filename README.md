@@ -133,7 +133,10 @@ scripts with no arguments (or `-h` / `--help`) to print usage:
 
 Pass `-` to create without a batch link. The script generates unique valid identifiers and submits
 an amount of `12345` pence. Set `AMOUNT_DUE`, `FILE_IDENTIFIER`, `BATCH_IDENTIFIER`, or
-`PENALTY_CHARGE_NUMBER` to override those defaults.
+`PENALTY_CHARGE_NUMBER` to override those defaults. A supplied `PENALTY_CHARGE_NUMBER` whose
+suffix is greater than `0` is linked to the existing case for the preceding suffix
+(`AB0531612A1` links to `AB0531612A0`). The script exits before create if that case is missing
+or if more than one case has that number.
 
 To create the PCN already linked to an existing batch case (`TEC_BATCH`), pass the batch case
 reference as an argument or set `BATCH_CASE_REFERENCE` (hyphens optional). The script verifies the

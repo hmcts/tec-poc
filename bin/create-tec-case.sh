@@ -27,7 +27,7 @@ that value is used as the batch case reference.
 Optional environment variables:
   TEC_API_URL, BATCH_CASE_REFERENCE, AMOUNT_DUE, FILE_IDENTIFIER,
   BATCH_IDENTIFIER, PENALTY_CHARGE_NUMBER, LOCAL_AUTHORITY,
-  ES_URL, DB_HOST, DB_PORT, DB_PASSWORD,
+  DB_HOST, DB_PORT, DB_PASSWORD,
   BATCH_REGISTRATION_REASON, BATCH_REGISTRATION_REASON_CODE
   (reason defaults: CLRC007 / "Linked when creating the case during batch
   registration"; passed through to link-pcn-to-batch.sh when linking)
