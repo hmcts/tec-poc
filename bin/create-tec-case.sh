@@ -3,6 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/authority_pcn_id.sh
+source "${SCRIPT_DIR}/lib/authority_pcn_id.sh"
 TEC_API_URL="${TEC_API_URL:-http://localhost:4013}"
 
 usage() {
@@ -28,6 +30,11 @@ Optional environment variables:
   BATCH_REGISTRATION_REASON, BATCH_REGISTRATION_REASON_CODE
   (reason defaults: CLRC007 / "Linked when creating the case during batch
   registration"; passed through to link-pcn-to-batch.sh when linking)
+
+The PCN is generated with generate-pcn-number.sh from LOCAL_AUTHORITY's TEC
+id (default: westminster, id WE). File and batch identifiers use that same
+id. Set PENALTY_CHARGE_NUMBER to supply a PCN instead; file and batch
+identifiers then use that PCN's authority id unless overridden.
 
 Examples:
   ${0} -                                    # create unlinked PCN
@@ -69,25 +76,32 @@ if [[ -n "${BATCH_CASE_REFERENCE_RAW}" && -z "${SKIP_BATCH_CASE_ASSERT:-}" ]]; t
   "${SCRIPT_DIR}/assert-batch-case-exists.sh" "${BATCH_CASE_REFERENCE_RAW}"
 fi
 
+local_authority="${LOCAL_AUTHORITY:-westminster}"
 case_seed=$(($(date +%s) ^ $$ ^ RANDOM))
 file_number="$(printf '%05d' "$((case_seed % 100000))")"
 batch_number="$(printf '%06d' "$(((case_seed * 37) % 1000000))")"
-pcn_number="$(printf '%07d' "$(((case_seed * 101) % 10000000))")"
-authority_code="AB"
-pcn_check_character="A"
-pcn_registration_suffix="0"
-default_penalty_charge_number="${authority_code}${pcn_number}${pcn_check_character}${pcn_registration_suffix}"
+
+if [[ -n "${PENALTY_CHARGE_NUMBER:-}" ]]; then
+  penalty_charge_number="${PENALTY_CHARGE_NUMBER}"
+  if [[ ! "${penalty_charge_number}" =~ ^([A-Z]{2,3})[0-9]{7}[0-9A][0-9]$ ]]; then
+    echo "PENALTY_CHARGE_NUMBER must be an authority id, 7 digits, a check digit, and a suffix" >&2
+    exit 1
+  fi
+  authority_code="${BASH_REMATCH[1]}"
+else
+  authority_code="$(authority_pcn_id "${local_authority}")"
+  penalty_charge_number="$("${SCRIPT_DIR}/generate-pcn-number.sh" "${authority_code}")"
+fi
 
 file_identifier="${FILE_IDENTIFIER:-R${authority_code}${file_number}}"
 batch_identifier="${BATCH_IDENTIFIER:-R${authority_code}${batch_number}}"
-penalty_charge_number="${PENALTY_CHARGE_NUMBER:-${default_penalty_charge_number}}"
 amount_due="${AMOUNT_DUE:-12345}"
 
 case_data="$(jq --null-input --compact-output \
   --arg fileIdentifier "${file_identifier}" \
   --arg batchIdentifier "${batch_identifier}" \
   --arg penaltyChargeNumber "${penalty_charge_number}" \
-  --arg localAuthority "${LOCAL_AUTHORITY:-westminster}" \
+  --arg localAuthority "${local_authority}" \
   --argjson amountDue "${amount_due}" \
   '{
     fileIdentifier: $fileIdentifier,

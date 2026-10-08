@@ -12,6 +12,10 @@ Case references are created by `./bin/seed-demo-catalogue.sh` and change every t
 and re-seed. They are **not** committed — regenerate them on your machine after
 `./gradlew bootWithCCD` is running.
 
+Catalogue PCNs use the catalogue authority's TEC id. The default is Westminster, so **Penalty
+charge number** starts with `WE` and the suffix is `0`. What each character means, and how the
+check digit is calculated: [Penalty charge numbers](/penalty-charge-numbers.html).
+
 Approach, scenario list, and how to customise the catalogue:
 [Local demo catalogue seed](http://localhost:4568/demo-catalogue-seed.html)
 (tech docs), including

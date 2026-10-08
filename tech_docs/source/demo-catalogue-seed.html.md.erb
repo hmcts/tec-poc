@@ -74,10 +74,14 @@ PCN_REF="$(./bin/create-tec-case.sh "${BATCH_REF}" | jq -r '.caseReference')"
 
 Passing a batch ref into `create-tec-case.sh` / `create-tec-cases.sh` links after create
 (see [Local bin scripts — Link and transition](/local-scripts.html#link-and-transition)).
-The catalogue usually creates PCNs with `-`, then calls `link-pcn-to-batch.sh` (via the
-`link_pcn_to_batch` helper) so a PCN can join the shared registration batch **and** any
-type-specific companions. Filler PCNs for the shared registration batch still use
-`create-tec-cases.sh "${reg_batch_ref}"`.
+The catalogue usually creates PCNs with `require_demo_pcn`, which calls
+`generate-pcn-number.sh` for the catalogue authority's TEC id (Westminster is `WE`; override with
+`LOCAL_AUTHORITY`). See [Penalty charge numbers](/pcn-number.html). It then calls
+`link-pcn-to-batch.sh` (via the `link_pcn_to_batch` helper) so a PCN can join the shared
+registration batch **and** any type-specific companions. Filler PCNs for the shared registration
+batch still use `create-tec-cases.sh "${reg_batch_ref}"`, which generates each PCN from that
+case's authority id. Batch identifiers from `unique_batch_identifier` use the same TEC id
+(`RWE######` for Westminster).
 
 ExUI deep link shape (nav proxy, not `:3002`):
 
@@ -180,7 +184,8 @@ record_entry \
 | --- | --- |
 | `require_ref <script> [args…]` | Run a create script; print `caseReference` or exit |
 | `state_from_json_cmd <fallback> <script> [args…]` | Run a mutate script that prints JSON; print `.state` (or fallback) |
-| `unique_batch_identifier` | New `RAB######` id matching create-batch validation |
+| `unique_batch_identifier` | New `R{authority-id}######` batch id. The prefix is the catalogue authority's TEC id (Westminster is `WE`) |
+| `require_demo_pcn` | Create one PCN via `generate-pcn-number.sh` for that same TEC id, then `create-tec-case.sh` |
 | `record_entry …` | Append one row to the in-memory catalogue (later written to the partial) |
 | `link_pcn_to_batch <pcn-ref> <batch-ref>` | `link-pcn-to-batch.sh` (batch must already exist) |
 | `attach_pcn_doc <ref> <folder> <file>` | `attach-case-file-document.sh` for PCN CFV folders |
@@ -198,19 +203,19 @@ Typical PCN patterns (assume `reg_batch_ref` is the shared processed registratio
 
 ```bash
 # Registration link only (PENDING_CASE_ISSUED)
-ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+ref="$(require_demo_pcn)"
 link_pcn_to_batch "${ref}" "${reg_batch_ref}"
 record_entry "pcn-pending-case-issued" "…" "TEC" "PENDING_CASE_ISSUED" "${ref}" "…"
 
 # Real lifecycle + application PDF
-ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+ref="$(require_demo_pcn)"
 link_pcn_to_batch "${ref}" "${reg_batch_ref}"
 state="$(state_from_json_cmd CASE_ISSUED "${SCRIPT_DIR}/transition-to-case-issued.sh" "${ref}")"
 gen_application "${ref}" "in time" TE9
 record_entry "pcn-case-issued" "…" "TEC" "${state}" "${ref}" "…"
 
 # Awaiting OOT validation — registration only, OOT TE9 + TE7
-ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+ref="$(require_demo_pcn)"
 link_pcn_to_batch "${ref}" "${reg_batch_ref}"
 gen_application "${ref}" "out of time" TE9
 gen_time_extension "${ref}" TE7
@@ -219,7 +224,7 @@ state="$(state_from_json_cmd AWAITING_OOT_VALIDATION \
 record_entry "pcn-awaiting-oot-validation" "…" "TEC" "${state}" "${ref}" "…"
 
 # Awaiting OOT validation — registration only, OOT PE3 + PE2
-ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+ref="$(require_demo_pcn)"
 link_pcn_to_batch "${ref}" "${reg_batch_ref}"
 gen_application "${ref}" "out of time" PE3
 gen_time_extension "${ref}" PE2
@@ -228,7 +233,7 @@ state="$(state_from_json_cmd AWAITING_OOT_VALIDATION \
 record_entry "pcn-awaiting-oot-validation-pe" "…" "TEC" "${state}" "${ref}" "…"
 
 # Awaiting LA OOT — registration only (no outOfTimeDecisions link yet)
-ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+ref="$(require_demo_pcn)"
 link_pcn_to_batch "${ref}" "${reg_batch_ref}"
 gen_application "${ref}" "out of time" TE9
 gen_time_extension "${ref}" TE7
@@ -237,7 +242,7 @@ state="$(state_from_json_cmd AWAITING_LA_OOT_RESPONSE \
 record_entry "pcn-awaiting-la-oot" "…" "TEC" "${state}" "${ref}" "…"
 
 # OOT appeal (N244) — registration + outOfTimeDecisions companion + OOT apps + N244
-ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+ref="$(require_demo_pcn)"
 link_pcn_to_batch "${ref}" "${reg_batch_ref}"
 BATCH_IDENTIFIER="$(unique_batch_identifier)"
 companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster outOfTimeDecisions)"
@@ -251,7 +256,7 @@ attach_n244 "${ref}"
 record_entry "pcn-pending-oot-appeal-payment" "…" "TEC" "${state}" "${ref}" "…"
 
 # Transfer companion: create batch before link; registration link first
-ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+ref="$(require_demo_pcn)"
 link_pcn_to_batch "${ref}" "${reg_batch_ref}"
 BATCH_IDENTIFIER="$(unique_batch_identifier)"
 companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster transferRequest)"

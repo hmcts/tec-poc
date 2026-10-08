@@ -8,6 +8,9 @@ readonly PARTIAL_PATH="${REPO_ROOT}/design_docs/source/partials/_local_demo_case
 readonly JSON_PATH="${SCRIPT_DIR}/.demo-catalogue.json"
 readonly TEMPLATES_DIR="${SCRIPT_DIR}/templates"
 
+# shellcheck source=lib/authority_pcn_id.sh
+source "${SCRIPT_DIR}/lib/authority_pcn_id.sh"
+
 TEC_API_URL="${TEC_API_URL:-http://localhost:4013}"
 EXUI_BASE_URL="${EXUI_BASE_URL:-http://localhost:3000}"
 DESIGN_DOCS_URL="${DESIGN_DOCS_URL:-http://localhost:4567/local-demo-cases.html}"
@@ -35,6 +38,7 @@ Optional environment variables:
   DESIGN_DOCS_URL (default: http://localhost:4567/local-demo-cases.html)
   SKIP_CLEAR (default: false)
   REGISTRATION_PCN_COUNT (default: 3) — filler PCNs linked to the shared processed registration batch
+  LOCAL_AUTHORITY (default: westminster) — catalogue batches and PCNs use this authority's TEC id
 
 See tech docs: Local demo catalogue seed.
 EOF
@@ -74,9 +78,13 @@ require_stack() {
   fi
 }
 
+DEMO_LOCAL_AUTHORITY="${LOCAL_AUTHORITY:-westminster}"
+DEMO_AUTHORITY_ID="$(authority_pcn_id "${DEMO_LOCAL_AUTHORITY}")"
+export AUTHORITY_CODE="${DEMO_AUTHORITY_ID}"
+
 unique_batch_identifier() {
-  # CreateBatchRequest: ^R[A-Z]{2,3}[0-9]{6}$ (authority prefix AB).
-  printf 'RAB%06d' "$((($(date +%s) + RANDOM + $$) % 1000000))"
+  # CreateBatchRequest: ^R[A-Z]{2,3}[0-9]{6}$ using the catalogue authority's TEC id.
+  printf 'R%s%06d' "${DEMO_AUTHORITY_ID}" "$((($(date +%s) + RANDOM + $$) % 1000000))"
 }
 
 # Capture JSON stdout from a create script; print caseReference on stdout.
@@ -102,6 +110,27 @@ require_ref() {
     exit 1
   fi
   printf '%s\n' "${ref}"
+}
+
+# PCN for the catalogue authority. Check digit comes from generate-pcn-number.sh.
+# File and batch identifiers use the same TEC id so create-tec-case validation accepts them.
+require_demo_pcn() {
+  local pcn file_number batch_number
+  pcn="$("${SCRIPT_DIR}/generate-pcn-number.sh" "${DEMO_AUTHORITY_ID}")"
+  file_number="$(printf '%05d' "$((($(date +%s) + RANDOM + $$) % 100000))")"
+  batch_number="$(printf '%06d' "$((($(date +%s) * 37 + RANDOM) % 1000000))")"
+  require_ref env \
+    "LOCAL_AUTHORITY=${DEMO_LOCAL_AUTHORITY}" \
+    "PENALTY_CHARGE_NUMBER=${pcn}" \
+    "FILE_IDENTIFIER=R${DEMO_AUTHORITY_ID}${file_number}" \
+    "BATCH_IDENTIFIER=R${DEMO_AUTHORITY_ID}${batch_number}" \
+    "${SCRIPT_DIR}/create-tec-case.sh" -
+}
+
+require_demo_exception() {
+  local pcn
+  pcn="$("${SCRIPT_DIR}/generate-pcn-number.sh" "${DEMO_AUTHORITY_ID}")"
+  PENALTY_CHARGE_NUMBER="${pcn}" require_ref "${SCRIPT_DIR}/create-tec-exception-case.sh"
 }
 
 # Run a mutate script that prints CCD/event JSON; print .state (or fallback).
@@ -300,7 +329,7 @@ seed_catalogue() {
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
   reg_batch_ref="$(
     TARGET_STATE=PROCESSING_COMPLETE \
-      require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster registration
+      require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" registration
   )"
   attach_standard_batch_inputs "${reg_batch_ref}" registration
   record_entry \
@@ -315,7 +344,7 @@ seed_catalogue() {
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
   batch_ref="$(
     TARGET_STATE=QUEUED_FOR_PROCESSING \
-      require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster registration
+      require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" registration
   )"
   attach_standard_batch_inputs "${batch_ref}" registration
   record_entry \
@@ -330,7 +359,7 @@ seed_catalogue() {
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
   batch_ref="$(
     TARGET_STATE=QUEUED_FOR_PROCESSING \
-      require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster warrantAuthRequests
+      require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" warrantAuthRequests
   )"
   attach_standard_batch_inputs "${batch_ref}" warrantAuthRequests
   record_entry \
@@ -345,7 +374,7 @@ seed_catalogue() {
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
   warrant_auth_complete_ref="$(
     TARGET_STATE=PROCESSING_COMPLETE \
-      require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster warrantAuthRequests
+      require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" warrantAuthRequests
   )"
   attach_standard_batch_inputs "${warrant_auth_complete_ref}" warrantAuthRequests
   attach_batch_doc "${warrant_auth_complete_ref}" outputs "${TEMPLATES_DIR}/PE3.pdf"
@@ -361,7 +390,7 @@ seed_catalogue() {
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
   batch_ref="$(
     TARGET_STATE=PROCESSING_FAILED \
-      require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster warrantAuthRequests
+      require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" warrantAuthRequests
   )"
   attach_standard_batch_inputs "${batch_ref}" warrantAuthRequests
   record_entry \
@@ -375,7 +404,7 @@ seed_catalogue() {
   # --- Catalogue PCNs (create → link registration → type-specific → mutate) ---
 
   echo "Seeding pcn-pending-case-issued..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   record_entry \
     "pcn-pending-case-issued" \
@@ -386,7 +415,7 @@ seed_catalogue() {
     "Fresh registration with payment still pending. Linked Cases shows the shared processed registration batch. Case File View is empty."
 
   echo "Seeding pcn-case-issued..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   state="$(state_from_json_cmd CASE_ISSUED "${SCRIPT_DIR}/transition-to-case-issued.sh" "${ref}")"
   gen_application "${ref}" "in time" TE9
@@ -399,7 +428,7 @@ seed_catalogue() {
     "After registration payment succeeded. Linked Cases shows the shared registration batch; Applications has an in-time TE9."
 
   echo "Seeding pcn-awaiting-oot-validation..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   gen_application "${ref}" "out of time" TE9
   gen_time_extension "${ref}" TE7
@@ -414,7 +443,7 @@ seed_catalogue() {
     "Out-of-time application waiting for a clerk to check the forms. Applications has an OOT TE9 and a TE7. Next steps offers Edit TE9 application, Edit TE7 application, and Validate OOT application."
 
   echo "Seeding pcn-awaiting-oot-validation-pe..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   gen_application "${ref}" "out of time" PE3
   gen_time_extension "${ref}" PE2
@@ -429,7 +458,7 @@ seed_catalogue() {
     "Out-of-time statutory declaration waiting for a clerk to check the forms. Applications has an OOT PE3 and a PE2. Next steps offers Edit PE3 application, Edit PE2 application, and Validate OOT application."
 
   echo "Seeding pcn-awaiting-la-oot..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   gen_application "${ref}" "out of time" TE9
   gen_time_extension "${ref}" TE7
@@ -444,10 +473,10 @@ seed_catalogue() {
     "Waiting for an LA out-of-time response (not yet linked to an outOfTimeDecisions batch). Linked Cases shows registration only; Applications has OOT TE9 and TE7."
 
   echo "Seeding pcn-pending-refusal-decision..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
-  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster outOfTimeDecisions)"
+  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" outOfTimeDecisions)"
   attach_standard_batch_inputs "${companion_ref}" outOfTimeDecisions
   link_pcn_to_batch "${ref}" "${companion_ref}"
   gen_application "${ref}" "out of time" TE9
@@ -463,10 +492,10 @@ seed_catalogue() {
     "Linked Cases shows the shared registration batch and an out-of-time decisions companion. Applications has OOT TE9 and TE7. Case details shows Out of time application decision (Refused) under Registration. Next step includes Review OOT refusal decision."
 
   echo "Seeding pcn-pending-oot-appeal-payment..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
-  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster outOfTimeDecisions)"
+  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" outOfTimeDecisions)"
   attach_standard_batch_inputs "${companion_ref}" outOfTimeDecisions
   link_pcn_to_batch "${ref}" "${companion_ref}"
   gen_application "${ref}" "out of time" TE9
@@ -483,10 +512,10 @@ seed_catalogue() {
     "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf. Case details shows General applications: Issued, respondent, something else, OOT refusal appeal."
 
   echo "Seeding pcn-oot-appeal-payment-confirmed..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
-  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster outOfTimeDecisions)"
+  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" outOfTimeDecisions)"
   attach_standard_batch_inputs "${companion_ref}" outOfTimeDecisions
   link_pcn_to_batch "${ref}" "${companion_ref}"
   gen_application "${ref}" "out of time" TE9
@@ -503,10 +532,10 @@ seed_catalogue() {
     "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf. Case details shows General applications: Issued, respondent, something else, OOT refusal appeal."
 
   echo "Seeding pcn-pending-oot-appeal-decision..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
-  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster outOfTimeDecisions)"
+  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" outOfTimeDecisions)"
   attach_standard_batch_inputs "${companion_ref}" outOfTimeDecisions
   link_pcn_to_batch "${ref}" "${companion_ref}"
   gen_application "${ref}" "out of time" TE9
@@ -523,10 +552,10 @@ seed_catalogue() {
     "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf. Case details shows General applications: Issued, respondent, something else, OOT refusal appeal."
 
   echo "Seeding pcn-oot-appeal-refused..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
-  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster outOfTimeDecisions)"
+  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" outOfTimeDecisions)"
   attach_standard_batch_inputs "${companion_ref}" outOfTimeDecisions
   link_pcn_to_batch "${ref}" "${companion_ref}"
   gen_application "${ref}" "out of time" TE9
@@ -543,10 +572,10 @@ seed_catalogue() {
     "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf. Case details shows General applications: Issued, respondent, something else, OOT refusal appeal."
 
   echo "Seeding pcn-case-revoked-oot-appeal-accepted..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
-  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster outOfTimeDecisions)"
+  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" outOfTimeDecisions)"
   attach_standard_batch_inputs "${companion_ref}" outOfTimeDecisions
   link_pcn_to_batch "${ref}" "${companion_ref}"
   gen_application "${ref}" "out of time" TE9
@@ -563,7 +592,7 @@ seed_catalogue() {
     "Linked Cases shows registration and an out-of-time decisions companion. Applications has OOT TE9, TE7, and N244_0622.pdf. Case details shows General applications: Issued, respondent, something else, OOT refusal appeal."
 
   echo "Seeding pcn-warrant-issued..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   link_pcn_to_batch "${ref}" "${warrant_auth_complete_ref}"
   state="$(
@@ -579,11 +608,11 @@ seed_catalogue() {
     "Active warrant on Case details. Linked Cases shows the shared registration batch and the processed warrant-auth batch."
 
   echo "Seeding pcn-warrant-expired..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   link_pcn_to_batch "${ref}" "${warrant_auth_complete_ref}"
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
-  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster warrantReissueRequests)"
+  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" warrantReissueRequests)"
   attach_standard_batch_inputs "${companion_ref}" warrantReissueRequests
   link_pcn_to_batch "${ref}" "${companion_ref}"
   state="$(
@@ -599,10 +628,10 @@ seed_catalogue() {
     "Expired warrant for comparison. Linked Cases shows registration, processed warrant-auth, and a warrant-reissue companion batch."
 
   echo "Seeding pcn-refer-enforcement..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
-  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster transferRequest)"
+  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" transferRequest)"
   attach_standard_batch_inputs "${companion_ref}" transferRequest
   link_pcn_to_batch "${ref}" "${companion_ref}"
   record_entry \
@@ -614,10 +643,10 @@ seed_catalogue() {
     "Linked Cases shows the shared registration batch and a transfer-request companion (Inputs: Batch file.xlsx and TE10.png). State is Refer for Enforcement."
 
   echo "Seeding pcn-closed..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-case.sh" -)"
+  ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
   BATCH_IDENTIFIER="$(unique_batch_identifier)"
-  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" westminster caseClosureRequests)"
+  companion_ref="$(require_ref "${SCRIPT_DIR}/create-tec-batch.sh" "${DEMO_LOCAL_AUTHORITY}" caseClosureRequests)"
   attach_standard_batch_inputs "${companion_ref}" caseClosureRequests
   link_pcn_to_batch "${ref}" "${companion_ref}"
   record_entry \
@@ -633,7 +662,7 @@ seed_catalogue() {
     "${SCRIPT_DIR}/create-tec-cases.sh" "${reg_batch_ref}" >/dev/null
 
   echo "Seeding exception-pending-review..." >&2
-  ref="$(require_ref "${SCRIPT_DIR}/create-tec-exception-case.sh")"
+  ref="$(require_demo_exception)"
   record_entry \
     "exception-pending-review" \
     "Exception — pending review" \

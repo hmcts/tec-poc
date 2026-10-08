@@ -1,0 +1,121 @@
+---
+title: Penalty charge numbers
+weight: 32
+---
+
+# Penalty charge numbers
+
+A penalty charge number (PCN) identifies one penalty charge. Local seed scripts build it with
+`bin/generate-pcn-number.sh`. The same number is stored on the TEC case as **Penalty charge number**
+and copied onto applications that quote it.
+
+## Format
+
+```text
+AA9999999X9
+```
+
+| Part | Length | Meaning |
+| --- | --- | --- |
+| `AA` | 2 or 3 letters | Local authority id |
+| `9999999` | 7 digits | Unique PCN number for that authority |
+| `X` | 1 character | Mod 11 check digit (`0`–`9`, or `A` when the remainder is 10) |
+| `9` | 1 digit | Numeric suffix |
+
+In this POC the suffix is always `0`. It marks a reissue of the same charge and is **not** included
+in the check-digit calculation. A 2-letter authority produces 11 characters (`WE705998990`). A
+3-letter authority produces 12 (`WCC123456700`).
+
+The create API accepts `^[A-Z]{2,3}[0-9]{7}[0-9A][0-9]$`. On a PCN case the file identifier
+(`R` + authority id + 5 digits) and batch identifier (`R` + authority id + 6 digits) must use the
+same authority id as the PCN.
+
+If the authority id or the 7-digit number is missing, the check digit is not calculated.
+
+## Local authority id
+
+The letters are the TEC authority id, not the CCD FixedList code. `westminster` is `WE`.
+`manchesterCityCouncil` is `MC`. The map is `bin/lib/local_authority_pcn_ids.txt`, from the TEC
+two-alpha list (Annex 6B). Where an authority has more than one code, the London authorities list
+is used when it has one; otherwise the first Annex 6B code is used. Councils with no TEC id are
+omitted from the map.
+
+`bin/lib/authority_pcn_id.sh` looks up that file. These scripts then call
+`generate-pcn-number.sh` with the id:
+
+| Script | Authority used |
+| --- | --- |
+| `bin/create-tec-case.sh` | `LOCAL_AUTHORITY`, default `westminster` (`WE`) |
+| `bin/create-tec-cases.sh` | Each case's authority (or `LOCAL_AUTHORITY` when set) |
+| `bin/create-gm-tec-cases.sh` | Each Greater Manchester authority, via `create-tec-case.sh` |
+| `bin/seed-demo-catalogue.sh` | Catalogue authority (`LOCAL_AUTHORITY`, default Westminster `WE`) for catalogue PCNs, exception PCNs, and batch identifiers |
+
+Set `PENALTY_CHARGE_NUMBER` on `create-tec-case.sh` to supply a number. File and batch identifiers
+then follow that number's authority id unless `FILE_IDENTIFIER` or `BATCH_IDENTIFIER` is set.
+
+## Check digit
+
+The check digit is calculated on the authority id and the 7-digit number only.
+
+### Letter values
+
+Each letter of the authority id becomes a digit. The alphabet restarts at 1 every ten letters.
+`J` and `T` are `0`. `Z` is `6`.
+
+| Letters | Values |
+| --- | --- |
+| A B C D E F G H I J | 1 2 3 4 5 6 7 8 9 0 |
+| K L M N O P Q R S T | 1 2 3 4 5 6 7 8 9 0 |
+| U V W X Y Z | 1 2 3 4 5 6 |
+
+Digits in the 7-digit number stay as themselves.
+
+### Weights
+
+For a 2-letter authority the nine values (2 letters + 7 digits) are weighted 9, 8, … 1:
+
+```text
+(a×9) + (b×8) + (c×7) + (d×6) + (e×5) + (f×4) + (g×3) + (h×2) + (i×1)
+```
+
+For a 3-letter authority the ten values are weighted 10, 9, … 1:
+
+```text
+(a×10) + (b×9) + (c×8) + (d×7) + (e×6) + (f×5) + (g×4) + (h×3) + (i×2) + (j×1)
+```
+
+`a` onwards are the characters of the authority id and the 7-digit number, in order, after letters
+have been converted.
+
+Divide the total by 11. The remainder is the check digit. If the remainder is 10, the check digit
+is `A`.
+
+### Example: `LR2468037`
+
+1. Convert `LR` to digits: `L` is 2, `R` is 8, so `28`.
+2. Weight the nine values and add them:
+
+   `(2×9 = 18) + (8×8 = 64) + (2×7 = 14) + (4×6 = 24) + (6×5 = 30) + (8×4 = 32) + (0×3 = 0) + (3×2 = 6) + (7×1 = 7) = 195`
+
+3. Divide 195 by 11. 11 goes into 195 seventeen times (`11×17 = 187`).
+4. The remainder is `195 − 187 = 8`, so the check digit is `8`.
+
+With suffix `0` the PCN is `LR246803780`.
+
+### Remainder 10
+
+`LR0000005` totals 87. `87 − (11×7) = 10`, so the check digit is `A` and the PCN is `LR0000005A0`.
+
+### Three-letter authority
+
+`WCC1234567` uses weights 10 down to 1. `W` is 3 and `C` is 3, so the values are
+`3, 3, 3, 1, 2, 3, 4, 5, 6, 7`. The total is 165, which divides by 11 exactly. The check digit is
+`0` and the PCN is `WCC123456700`.
+
+## Generate a number
+
+```bash
+./bin/generate-pcn-number.sh LR 2468037   # LR246803780
+./bin/generate-pcn-number.sh WE           # random 7-digit number, check digit, suffix 0
+LOCAL_AUTHORITY=manchesterCityCouncil ./bin/create-tec-case.sh -
+```

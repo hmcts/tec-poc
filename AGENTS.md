@@ -12,6 +12,7 @@ Prefer these files over inventing CCD / ExUI topology. They are the GOV.UK Tech 
 | Next step events matrix (worksheet) | [`tech_docs/source/next-step-events-matrix.html.md.erb`](tech_docs/source/next-step-events-matrix.html.md.erb) |
 | Enter a general application | [`tech_docs/source/enter-general-application.html.md.erb`](tech_docs/source/enter-general-application.html.md.erb) |
 | CFTLib / database ownership | [`tech_docs/source/cftlib-shared-database.html.md.erb`](tech_docs/source/cftlib-shared-database.html.md.erb) |
+| Penalty charge numbers (format and check digit) | [`tech_docs/source/pcn-number.html.md.erb`](tech_docs/source/pcn-number.html.md.erb) |
 | Local `bin/` scripts inventory | [`tech_docs/source/local-scripts.html.md.erb`](tech_docs/source/local-scripts.html.md.erb) |
 | Local demo catalogue seed (orchestrator) | [`tech_docs/source/demo-catalogue-seed.html.md.erb`](tech_docs/source/demo-catalogue-seed.html.md.erb) |
 | ExUI Upload batch file nav (local proxy) | [`tech_docs/source/exui-navigation.html.md.erb`](tech_docs/source/exui-navigation.html.md.erb) |
@@ -20,6 +21,7 @@ Prefer these files over inventing CCD / ExUI topology. They are the GOV.UK Tech 
 
 Tech docs overview: [`tech_docs/source/index.html.md.erb`](tech_docs/source/index.html.md.erb).
 Design docs (blockframes / nesting demo): [`design_docs/source/index.html.md.erb`](design_docs/source/index.html.md.erb).
+Penalty charge number format for designers: [`design_docs/source/penalty-charge-numbers.html.md.erb`](design_docs/source/penalty-charge-numbers.html.md.erb).
 
 ## Local preview
 

@@ -70,6 +70,10 @@ Jurisdiction id is `TEC`. Case types:
 | `TEC_BATCH` | TEC Batch | Uploaded batches |
 | `TEC_EXCEPTION` | TEC Exception | Exception items (unmatched / irrelevant submissions) |
 
+A PCN case's **Penalty charge number** is the authority id, a 7-digit number, a mod 11 check digit,
+and a suffix of `0`. File identifier and batch identifier on that case use the same authority id.
+Format and calculation: [Penalty charge numbers](/pcn-number.html).
+
 All three types reuse overlapping roles (exceptions shutter LOCAL_AUTHORITY):
 
 | Java role | IDAM role | Case-type access | State access |

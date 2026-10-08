@@ -3,6 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/authority_pcn_id.sh
+source "${SCRIPT_DIR}/lib/authority_pcn_id.sh"
 TEC_API_URL="${TEC_API_URL:-http://localhost:4013}"
 CASE_COUNT="${CASE_COUNT:-20}"
 
@@ -102,14 +104,14 @@ POSTCODES=(
   "NE1 4LP" "LE1 6TP" "SO14 3GS" "RG1 8DS" "BN1 4GW" "YO1 7HH"
   "CB2 1TN" "OX1 3BH" "EX4 3LS" "NR2 1NH"
 )
-AUTHORITY_CODES=(TE AB WM LE BR CK)
-PCN_CHECK_CHARACTERS=(0 1 2 3 4 5 6 7 8 9 A)
 NATURE_OF_OFFENCE_CODES=(01 02 03 04 05 06 07 08 09 10 11 12)
 
+# Only authorities with a TEC id, so each PCN prefix matches the case's local authority.
 LOCAL_AUTHORITIES=()
-while IFS= read -r line; do
-  [[ -n "${line}" ]] && LOCAL_AUTHORITIES+=("${line}")
-done < "${SCRIPT_DIR}/lib/local_authorities.txt"
+while IFS= read -r line || [[ -n "${line}" ]]; do
+  [[ -z "${line}" || "${line}" == \#* ]] && continue
+  LOCAL_AUTHORITIES+=("${line%% *}")
+done < "${SCRIPT_DIR}/lib/local_authority_pcn_ids.txt"
 
 random_from() {
   local items=("$@")
@@ -144,9 +146,6 @@ build_case_payload() {
   local authority_code
   local file_number
   local batch_number
-  local pcn_number
-  local pcn_check_character
-  local pcn_registration_suffix
   local penalty_charge_number
   local file_identifier
   local batch_identifier
@@ -154,18 +153,15 @@ build_case_payload() {
   local amount_due
   local local_authority
 
-  authority_code="$(random_from "${AUTHORITY_CODES[@]}")"
+  local_authority="${LOCAL_AUTHORITY:-$(random_from "${LOCAL_AUTHORITIES[@]}")}"
+  authority_code="$(authority_pcn_id "${local_authority}")"
   file_number="$(printf '%05d' "$(((sequence_base + index * 17) % 100000))")"
   batch_number="$(printf '%06d' "$(((sequence_base + index * 37) % 1000000))")"
-  pcn_number="$(printf '%07d' "$(((sequence_base + index * 101) % 10000000))")"
-  pcn_check_character="${PCN_CHECK_CHARACTERS[index % ${#PCN_CHECK_CHARACTERS[@]}]}"
-  pcn_registration_suffix="$((index % 10))"
-  penalty_charge_number="${authority_code}${pcn_number}${pcn_check_character}${pcn_registration_suffix}"
+  penalty_charge_number="$("${SCRIPT_DIR}/generate-pcn-number.sh" "${authority_code}")"
   file_identifier="R${authority_code}${file_number}"
   batch_identifier="R${authority_code}${batch_number}"
   respondent_name="$(random_from "${FIRST_NAMES[@]}") $(random_from "${LAST_NAMES[@]}")"
   amount_due="$(random_amount_due)"
-  local_authority="${LOCAL_AUTHORITY:-$(random_from "${LOCAL_AUTHORITIES[@]}")}"
 
   jq --null-input --compact-output \
     --arg fileIdentifier "${file_identifier}" \

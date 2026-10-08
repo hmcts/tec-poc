@@ -50,11 +50,12 @@ Used by other scripts; rarely invoked directly.
 | --- | --- | --- |
 | `bin/create-tec-batch.sh` | `<local-authority> [batch-type]` | Create one `TEC_BATCH` via `POST /batches`. No args shows help (unless `LOCAL_AUTHORITY` is set). Batch types: `registration`, `warrantAuthRequests`, `warrantReissueRequests`, `outOfTimeDecisions`, `changeOfAddress`, `caseClosureRequests`, `transferRequest` |
 | `bin/create-tec-batches.sh` | `<count> [batch-type]` | Create many batches (rotates authority / type / state unless fixed). No args shows help |
-| `bin/create-tec-case.sh` | `<batch-case-reference\|->` | Create one `TEC` PCN. Pass `-` for unlinked; pass a batch ref (or `BATCH_CASE_REFERENCE`) to link after create |
-| `bin/create-tec-cases.sh` | `<batch-case-reference\|->` | Bulk randomised PCNs (`CASE_COUNT`, default 20) |
-| `bin/create-gm-tec-cases.sh` | `<batch-case-reference\|->` | PCNs for each Greater Manchester authority (`CASES_PER_AUTHORITY`, default 10) |
+| `bin/create-tec-case.sh` | `<batch-case-reference\|->` | Create one `TEC` PCN. The PCN comes from `generate-pcn-number.sh` using `LOCAL_AUTHORITY`'s TEC id (default Westminster `WE`). Pass `-` for unlinked; pass a batch ref (or `BATCH_CASE_REFERENCE`) to link after create |
+| `bin/create-tec-cases.sh` | `<batch-case-reference\|->` | Bulk randomised PCNs (`CASE_COUNT`, default 20). Each PCN uses that case's TEC authority id |
+| `bin/create-gm-tec-cases.sh` | `<batch-case-reference\|->` | PCNs for each Greater Manchester authority (`CASES_PER_AUTHORITY`, default 10), via `create-tec-case.sh` |
 | `bin/create-tec-exception-case.sh` | (optional env overrides) | Create one `TEC_EXCEPTION` via `POST /exception-cases` |
 | `bin/assert-batch-case-exists.sh` | `<batch-case-reference>` | Verify a CCD case exists and is `TEC_BATCH` (used by the create/link scripts) |
+| `bin/generate-pcn-number.sh` | `<authority-id> [unique-number]` | Print a PCN (`AA9999999X0` or `AAA9999999X0`). Check digit is mod 11 of the authority id and the 7-digit number; suffix is always `0`. Omit the unique number to generate one |
 
 ### Create batch examples
 
@@ -70,6 +71,17 @@ Optional env overrides for batch create include `FILE_IDENTIFIER`, `BATCH_IDENTI
 `PCN_COUNT`, `OPERATION`, `RECEIVED_VIA`, `SUBMITTER_EMAIL`,
 `TARGET_STATE` (`QUEUED_FOR_PROCESSING` | `PROCESSING_STARTED` | `PROCESSING_COMPLETE` | `PROCESSING_FAILED`),
 and `ATTACH_SAMPLE_DOCUMENTS`.
+
+`generate-pcn-number.sh` prints one PCN. `create-tec-case.sh` and `create-tec-cases.sh` call it
+with the TEC id for the case's local authority (Westminster is `WE`). Format, letter values, and
+the mod 11 check digit are on [Penalty charge numbers](/pcn-number.html). The worked example
+`LR2468037` is `LR246803780`.
+
+```bash
+./bin/generate-pcn-number.sh LR 2468037
+./bin/generate-pcn-number.sh WE
+LOCAL_AUTHORITY=manchesterCityCouncil ./bin/create-tec-case.sh -
+```
 
 ## Link and transition
 
