@@ -120,6 +120,26 @@ A PCN may be linked to one registration batch per registration, and also to othe
 | `bin/enter-general-application.sh` | `<case-ref> <local authority\|respondent>` | `enterGeneralApplication` — uploads `N244_0622.pdf` and records an Issued general application. The event files the N244 under Applications and leaves PCN state unchanged. Clerk user (`tec-demo@test.com`) |
 | `bin/apply-warrant-authorisation.sh` | `<case-ref>` | `applyWarrantAuthorisation` — appends a warrant authorisation (issue/expiry/status) to the PCN; `STATUS=active` → `WARRANT_AUTHORISATION_ISSUED`, `expired` → `WARRANT_AUTHORISATION_EXPIRED`, `cancelled` → state unchanged |
 
+`generate-application.sh` and `generate-time-extension.sh` store a **Form validation result** on the form they insert. Case details shows that message at the top of the form's section. The default is `Form valid`. Set `FORM_VALIDATION_RESULT` to store a different message on that form only. Other forms on the same case are left alone.
+
+```bash
+FORM_VALIDATION_RESULT="Invalid - fields missing" \
+  ./bin/generate-application.sh <case-reference> "out of time" TE9
+```
+
+These four messages also change the generated form so the data matches the result:
+
+| `FORM_VALIDATION_RESULT` | Forms | What else the script records |
+| --- | --- | --- |
+| `Invalid - name does not match registration` | TE9, PE3, TE7, PE2 | Applicant and full name `JORDAN UNRELATED` |
+| `Invalid - application is for more time, expecting application to file out of time` | TE7 | Permission sought **for more time** (Case details heading **Application for extension of time**) |
+| `Invalid - fields missing` | TE9, PE3 | Location, address, and declaration left blank |
+| `Invalid - fields missing` | TE7, PE2 | Address and reasons left blank |
+| `Invalid - application not signed` | TE9, PE3 | No signature drawn on the PDF |
+| `Invalid - application not signed` | TE7, PE2 | Signed and dated **No**, and no signature on the PDF |
+
+Any other text is stored as the message. The rest of the form is filled as usual. The [demo catalogue](/demo-catalogue-seed.html) passes one of these messages for each form on the two **Awaiting OOT validation** PCNs.
+
 Optional env for a general application: `APPLICATION_TYPE` (`adjourn` \| `set aside` \| `something else`; default `something else`), `DATE_RECEIVED` (YYYY-MM-DD, default yesterday), `SOMETHING_ELSE_DETAILS` (default `OOT refusal appeal`), `WITHIN_14_DAYS` (`yes` \| `no`), `FEE_AMOUNT` (pence, default `12600` — £126.00), `APPLIED_FOR_HWF`, `HWF_REFERENCE`, `ALL_PARTIES_AGREE`, `WITHOUT_NOTICE`, `N244_FILE`. The fee is always recorded as received.
 
 Optional env for warrant authorisation: `DATE_OF_ISSUE`, `DATE_OF_EXPIRY` (YYYY-MM-DD),

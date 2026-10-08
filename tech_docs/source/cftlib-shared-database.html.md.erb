@@ -74,7 +74,8 @@ and registration document/date. `payment_status` defaults to `PENDING`. Checks e
 formats, matching authority prefixes, uppercase respondent details, and an amount range of 0–999999 pence.
 
 `tec_case_te9`, `tec_case_te7`, `tec_case_pe3`, and `tec_case_pe2` each store one received form,
-including that form's own penalty charge number. The same form PCN may repeat. Case details and edit
+including that form's own penalty charge number and `form_validation_result` (default `Form valid`).
+The same form PCN may repeat. Case details and edit
 events use the row with the highest PCN suffix, then the latest `created_at`.
 
 Flyway migration `V10__create_tec_batch.sql` adds `public.tec_batch` for case type `TEC_BATCH`
@@ -94,6 +95,7 @@ Batch schema updates since then:
 | `V20__create_tec_batch_pcn_link.sql` | Adds `tec_batch_pcn_link` for non-registration batch ↔ PCN membership (warrant auth, etc.) |
 | `V21__drop_tec_enforcement_case.sql` | Drops `tec_enforcement_case` / `tec_enforcement_case_document` and `tec_case.enforcement_case_reference` |
 | `V24__split_registration_and_forms.sql` | Adds `tec_case.pcn_stem` and `tec_case_registration`, `tec_case_te9`, `tec_case_te7`, `tec_case_pe3`, `tec_case_pe2`; drops the moved columns from `tec_case` |
+| `V25__form_validation_result_on_forms.sql` | Adds `form_validation_result` (default `Form valid`) on each form table |
 
 `BatchCaseRepository` owns the batch tables including `tec_batch_pcn_link`. Registration membership is
 `tec_case_registration.batch_case_reference` (one batch per registration). Other batch types store

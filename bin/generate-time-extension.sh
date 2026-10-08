@@ -34,6 +34,12 @@ Generate a TE7 or PE2 time-extension request for a TEC case:
 
 Optional environment variables:
   CCD_DATA_STORE_URL, SEED
+  FORM_VALIDATION_RESULT   replaces the default "Form valid" message stored on the form.
+                           Examples:
+                             Invalid - application is for more time, expecting application to file out of time
+                             Invalid - name does not match registration
+                             Invalid - fields missing
+                             Invalid - application not signed
 EOF
 }
 
@@ -138,6 +144,9 @@ PYTHON_ARGS=(
 )
 if [[ -n "${SEED:-}" ]]; then
   PYTHON_ARGS+=(--seed "${SEED}")
+fi
+if [[ -n "${FORM_VALIDATION_RESULT:-}" ]]; then
+  PYTHON_ARGS+=(--form-validation-result "${FORM_VALIDATION_RESULT}")
 fi
 
 echo "Building time-extension payload and filling ${FORM_CODE} PDF..." >&2

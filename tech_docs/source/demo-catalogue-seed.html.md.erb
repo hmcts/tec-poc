@@ -112,8 +112,8 @@ state matrix. Prefer **real lifecycle scripts** where they exist; use
 | `batch-processing-failed` | `TEC_BATCH` | Warrant-auth failed (unlinked) | Inputs: `Batch file.xlsx` | `TARGET_STATE=PROCESSING_FAILED` warrantAuthRequests → attach |
 | `pcn-pending-case-issued` | `TEC` | Fresh registration, payment pending | none | create `-` → `link_pcn_to_batch` → shared registration |
 | `pcn-case-issued` | `TEC` | After registration payment | Applications: in-time TE9 | create → link registration → `transition-to-case-issued.sh` → TE9 |
-| `pcn-awaiting-oot-validation` | `TEC` | OOT application waiting for clerk validation | Applications: OOT TE9 + TE7 | create → link registration only → OOT apps → `AWAITING_OOT_VALIDATION` |
-| `pcn-awaiting-oot-validation-pe` | `TEC` | Same state with the PE form pair | Applications: OOT PE3 + PE2 | create → link registration only → OOT PE3 + PE2 → `AWAITING_OOT_VALIDATION` |
+| `pcn-awaiting-oot-validation` | `TEC` | OOT application waiting for clerk validation | Applications: OOT TE9 (fields missing) + TE7 (for more time) | create → link registration only → OOT apps with form validation results → `AWAITING_OOT_VALIDATION` |
+| `pcn-awaiting-oot-validation-pe` | `TEC` | Same state with the PE form pair | Applications: OOT PE3 (name mismatch) + PE2 (not signed) | create → link registration only → OOT PE3 + PE2 with form validation results → `AWAITING_OOT_VALIDATION` |
 | `pcn-awaiting-la-oot` | `TEC` | Waiting for LA OOT response (no OOT decision batch yet) | Applications: OOT TE9 + TE7 | create → link registration only → OOT apps → `AWAITING_LA_OOT_RESPONSE` |
 | `pcn-pending-refusal-decision` | `TEC` | OOT decision batch already associated. Case details shows Out of time application decision (Refused). Next step includes Review OOT refusal decision | Applications: OOT TE9 + TE7; companion Inputs | create → link registration → create/attach `outOfTimeDecisions` → link → `PENDING_REFUSAL_DECISION` |
 | `pcn-pending-oot-appeal-payment` | `TEC` | OOT appeal awaiting payment | Applications: OOT TE9 + TE7 + `N244_0622.pdf`; General applications row; companion Inputs | create → link registration → create/attach `outOfTimeDecisions` → link → OOT apps → `PENDING_OOT_APPEAL_PAYMENT` → `attach_n244` |
@@ -138,6 +138,16 @@ and `AWAITING_LA_OOT_RESPONSE` are registration-only for Linked Cases — the LA
 will arrive *via* an `outOfTimeDecisions` batch is not linked yet; that link appears on
 `PENDING_REFUSAL_DECISION` and the five OOT-appeal demos (each also records an N244
 via `attach_n244`: PDF under Applications and a General applications row).
+
+The two **Awaiting OOT validation** PCNs pass a form validation result into
+`gen_application` / `gen_time_extension` (that is, `FORM_VALIDATION_RESULT` on
+`generate-application.sh` and `generate-time-extension.sh`). Each form then shows that message
+on Case details instead of the default **Form valid**, and the generated form matches the message.
+`pcn-awaiting-oot-validation` records the TE9 as **Invalid - fields missing** and the TE7 as
+**Invalid - application is for more time, expecting application to file out of time** (permission
+sought is for more time). `pcn-awaiting-oot-validation-pe` records the PE3 as **Invalid - name
+does not match registration** (applicant `JORDAN UNRELATED`) and the PE2 as **Invalid -
+application not signed**. Other catalogue applications leave **Form valid**.
 
 Every seeded `TEC_BATCH` gets `bin/templates/Batch file.xlsx` under Inputs via
 `attach_standard_batch_inputs`. Transfer-request batches also get `TE10.png`.
@@ -202,8 +212,8 @@ record_entry \
 | `attach_pcn_doc <ref> <folder> <file>` | `attach-case-file-document.sh` for PCN CFV folders |
 | `attach_batch_doc <ref> <inputs\|outputs> <file>` | Same with `CASE_TYPE_ID=TEC_BATCH` / `EVENT_ID=attachBatchDocument` |
 | `attach_standard_batch_inputs <batch-ref> [batch-type]` | Always attaches `Batch file.xlsx` → Inputs; also `TE10.png` when type is `transferRequest` |
-| `gen_application <ref> <in time\|out of time> <TE9\|PE3>` | `generate-application.sh` (Applications) |
-| `gen_time_extension <ref> <TE7\|PE2>` | `generate-time-extension.sh` (Applications) |
+| `gen_application <ref> <in time\|out of time> <TE9\|PE3> [form validation result]` | `generate-application.sh` (Applications). The optional result replaces `Form valid` |
+| `gen_time_extension <ref> <TE7\|PE2> [form validation result]` | `generate-time-extension.sh` (Applications). The optional result replaces `Form valid` |
 | `attach_n244 <ref> [applicant]` | `enter-general-application.sh` — Issued N244 and `N244_0622.pdf` under Applications. Applicant defaults to `respondent`; other answers use that script’s defaults. OOT-appeal demos only |
 
 Quote template paths that contain spaces, e.g. `"${TEMPLATES_DIR}/Batch file.xlsx"`.
@@ -228,8 +238,9 @@ record_entry "pcn-case-issued" "…" "TEC" "${state}" "${ref}" "…"
 # Awaiting OOT validation — registration only, OOT TE9 + TE7
 ref="$(require_demo_pcn)"
 link_pcn_to_batch "${ref}" "${reg_batch_ref}"
-gen_application "${ref}" "out of time" TE9
-gen_time_extension "${ref}" TE7
+gen_application "${ref}" "out of time" TE9 "Invalid - fields missing"
+gen_time_extension "${ref}" TE7 \
+  "Invalid - application is for more time, expecting application to file out of time"
 state="$(state_from_json_cmd AWAITING_OOT_VALIDATION \
   "${SCRIPT_DIR}/set-case-state.sh" "${ref}" AWAITING_OOT_VALIDATION)"
 record_entry "pcn-awaiting-oot-validation" "…" "TEC" "${state}" "${ref}" "…"
@@ -237,8 +248,8 @@ record_entry "pcn-awaiting-oot-validation" "…" "TEC" "${state}" "${ref}" "…"
 # Awaiting OOT validation — registration only, OOT PE3 + PE2
 ref="$(require_demo_pcn)"
 link_pcn_to_batch "${ref}" "${reg_batch_ref}"
-gen_application "${ref}" "out of time" PE3
-gen_time_extension "${ref}" PE2
+gen_application "${ref}" "out of time" PE3 "Invalid - name does not match registration"
+gen_time_extension "${ref}" PE2 "Invalid - application not signed"
 state="$(state_from_json_cmd AWAITING_OOT_VALIDATION \
   "${SCRIPT_DIR}/set-case-state.sh" "${ref}" AWAITING_OOT_VALIDATION)"
 record_entry "pcn-awaiting-oot-validation-pe" "…" "TEC" "${state}" "${ref}" "…"

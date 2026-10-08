@@ -4,6 +4,7 @@ import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import uk.gov.hmcts.ccd.sdk.CaseView;
@@ -18,8 +19,6 @@ import uk.gov.hmcts.ccd.sdk.type.ListValue;
 public class TecCaseView implements CaseView<TecCase, CaseState> {
 
     private final TecCaseRepository repository;
-
-    private static final String FORM_VALIDATION_NOT_RECORDED = "Not validated";
 
     static final String NO_PREVIOUS_REGISTRATIONS =
         "<p class=\"govuk-body\">There are no previous registrations.</p>";
@@ -63,21 +62,29 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
             previousRegistrations.isEmpty() ? null : toPreviousRegistrations(previousRegistrations)
         );
         tecCase.setPreviousRegistrationsMarkdown(NO_PREVIOUS_REGISTRATIONS);
-        FormValidationResult validationResult = tecCase.getFormValidationResult();
-        String validationDisplay = validationResult == null
-            ? FORM_VALIDATION_NOT_RECORDED
-            : validationResult.getLabel();
         if (tecCase.getTe9Details() != null) {
-            tecCase.getTe9Details().setFormValidationResultDisplay(validationDisplay);
+            defaultFormValidationDisplay(
+                tecCase.getTe9Details().getFormValidationResultDisplay(),
+                tecCase.getTe9Details()::setFormValidationResultDisplay
+            );
         }
         if (tecCase.getPe3Details() != null) {
-            tecCase.getPe3Details().setFormValidationResultDisplay(validationDisplay);
+            defaultFormValidationDisplay(
+                tecCase.getPe3Details().getFormValidationResultDisplay(),
+                tecCase.getPe3Details()::setFormValidationResultDisplay
+            );
         }
         if (tecCase.getTe7Details() != null) {
-            tecCase.getTe7Details().setFormValidationResultDisplay(validationDisplay);
+            defaultFormValidationDisplay(
+                tecCase.getTe7Details().getFormValidationResultDisplay(),
+                tecCase.getTe7Details()::setFormValidationResultDisplay
+            );
         }
         if (tecCase.getPe2Details() != null) {
-            tecCase.getPe2Details().setFormValidationResultDisplay(validationDisplay);
+            defaultFormValidationDisplay(
+                tecCase.getPe2Details().getFormValidationResultDisplay(),
+                tecCase.getPe2Details()::setFormValidationResultDisplay
+            );
         }
         if (tecCase.getLocalAuthority() != null) {
             tecCase.setCaseAccessCategory(tecCase.getLocalAuthority().getCode());
@@ -94,6 +101,12 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
         );
         tecCase.setAllDocuments(toAllDocuments(repository.findDocuments(request.caseRef())));
         return tecCase;
+    }
+
+    private static void defaultFormValidationDisplay(String current, Consumer<String> setter) {
+        if (current == null || current.isBlank()) {
+            setter.accept(TecCaseRepository.DEFAULT_FORM_VALIDATION_RESULT);
+        }
     }
 
     static String stateLabel(CaseState state) {

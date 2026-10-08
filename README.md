@@ -380,6 +380,23 @@ fills the remaining application fields. Set `SEED=<n>` for reproducible random v
 On first run the script creates `bin/.venv-generate-application` and installs `pypdf` /
 `reportlab` there for PDF filling.
 
+Each recorded form stores its own **Form validation result**, shown at the top of that form's
+Case details section. The default is `Form valid`. Set `FORM_VALIDATION_RESULT` to store a
+different message on that form only:
+
+```bash
+FORM_VALIDATION_RESULT="Invalid - fields missing" \
+  ./bin/generate-application.sh <case-reference> "out of time" TE9
+```
+
+These messages also change the generated form so the data matches the result:
+
+- `Invalid - name does not match registration` — applicant and full name `JORDAN UNRELATED`
+- `Invalid - fields missing` — location, address, and declaration left blank
+- `Invalid - application not signed` — no signature on the PDF
+
+Any other text is stored as the message and the rest of the form is filled as usual.
+
 ### Generate a sample TE7/PE2 time-extension request (local)
 
 With `bootWithCCD` running, generate time-extension data for an existing case, submit the
@@ -396,6 +413,14 @@ reproducible random values. The script reuses the same Python venv as
 registration PCN (for TE7, the heading depends on permission sought), for example
 `Application to file out of time - AB0531612A2.pdf` or
 `Application for extension of time - AB0531612A0.pdf`.
+
+`FORM_VALIDATION_RESULT` works the same way as on `generate-application.sh`: it replaces the
+default `Form valid` message on that TE7 or PE2. For a TE7,
+`Invalid - application is for more time, expecting application to file out of time` also sets
+permission sought to **for more time**, so the PDF and Case details heading are
+**Application for extension of time**. `Invalid - fields missing` leaves the address and reasons
+blank. `Invalid - application not signed` records signed and dated as **No** and omits the
+signature. `Invalid - name does not match registration` uses the name `JORDAN UNRELATED`.
 
 ### Add a registration (local)
 

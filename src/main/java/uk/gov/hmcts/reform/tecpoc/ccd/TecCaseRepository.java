@@ -20,6 +20,13 @@ import uk.gov.hmcts.ccd.sdk.type.CaseLink;
 public class TecCaseRepository {
 
     /**
+     * Shown on a form when {@code recordApplication} / {@code recordTimeExtension} omits a message.
+     */
+    static final String DEFAULT_FORM_VALIDATION_RESULT = "Form valid";
+
+    private static final int MAX_FORM_VALIDATION_RESULT_LENGTH = 200;
+
+    /**
      * Highest PCN suffix, then the latest row. Shared by Case details and edit events.
      */
     private static final String CURRENT_RECORD_ORDER =
@@ -792,12 +799,12 @@ public class TecCaseRepository {
                 case_reference, penalty_charge_number, date_received, type, te7_submitted,
                 vehicle_registration, applicant, location_of_contravention, date_of_contravention,
                 title, full_name, company_name, address, postcode, declaration,
-                date_paid, how_paid, paid_to
+                date_paid, how_paid, paid_to, form_validation_result
             ) values (
                 :caseReference, :penaltyChargeNumber, :dateReceived, :type, :te7Submitted,
                 :vehicleRegistration, :applicant, :locationOfContravention, :dateOfContravention,
                 :title, :fullName, :companyName, :address, :postcode, :declaration,
-                :datePaid, :howPaid, :paidTo
+                :datePaid, :howPaid, :paidTo, :formValidationResult
             )
             """, applicationInsertParameters(caseReference, tecCase));
     }
@@ -808,12 +815,12 @@ public class TecCaseRepository {
                 case_reference, penalty_charge_number, date_received, type, te7_submitted,
                 vehicle_registration, applicant, location_of_contravention, date_of_contravention,
                 title, full_name, company_name, address, postcode, declaration, reasons_given,
-                date_paid, how_paid, paid_to
+                date_paid, how_paid, paid_to, form_validation_result
             ) values (
                 :caseReference, :penaltyChargeNumber, :dateReceived, :type, :te7Submitted,
                 :vehicleRegistration, :applicant, :locationOfContravention, :dateOfContravention,
                 :title, :fullName, :companyName, :address, :postcode, :declaration, :reasonsGiven,
-                :datePaid, :howPaid, :paidTo
+                :datePaid, :howPaid, :paidTo, :formValidationResult
             )
             """, applicationInsertParameters(caseReference, tecCase)
             .addValue(
@@ -851,7 +858,11 @@ public class TecCaseRepository {
             )
             .addValue("datePaid", tecCase.getApplicationDatePaid())
             .addValue("howPaid", tecCase.getApplicationHowPaid())
-            .addValue("paidTo", tecCase.getApplicationPaidTo());
+            .addValue("paidTo", tecCase.getApplicationPaidTo())
+            .addValue(
+                "formValidationResult",
+                formValidationResultToStore(tecCase.getFormValidationResultMessage())
+            );
     }
 
     private void insertTe7(long caseReference, TecCase tecCase) {
@@ -859,11 +870,11 @@ public class TecCaseRepository {
             insert into tec_case_te7 (
                 case_reference, penalty_charge_number, vehicle_registration, title, other_title,
                 full_name, company_name, address, postcode, permission_type, reasons_given,
-                signed_and_dated, signed_by, date_signed, print_full_name
+                signed_and_dated, signed_by, date_signed, print_full_name, form_validation_result
             ) values (
                 :caseReference, :penaltyChargeNumber, :vehicleRegistration, :title, :otherTitle,
                 :fullName, :companyName, :address, :postcode, :permissionType, :reasonsGiven,
-                :signedAndDated, :signedBy, :dateSigned, :printFullName
+                :signedAndDated, :signedBy, :dateSigned, :printFullName, :formValidationResult
             )
             """, new MapSqlParameterSource()
             .addValue("caseReference", caseReference)
@@ -890,7 +901,11 @@ public class TecCaseRepository {
                     : tecCase.getTimeExtensionSignedBy().name()
             )
             .addValue("dateSigned", tecCase.getTimeExtensionDateSigned())
-            .addValue("printFullName", tecCase.getTimeExtensionPrintFullName()));
+            .addValue("printFullName", tecCase.getTimeExtensionPrintFullName())
+            .addValue(
+                "formValidationResult",
+                formValidationResultToStore(tecCase.getFormValidationResultMessage())
+            ));
     }
 
     private void insertPe2(long caseReference, TecCase tecCase) {
@@ -898,11 +913,11 @@ public class TecCaseRepository {
             insert into tec_case_pe2 (
                 case_reference, penalty_charge_number, vehicle_registration, applicant,
                 location_of_contravention, date_of_contravention, full_name, address, postcode,
-                reasons_given, signed_and_dated, date_signed
+                reasons_given, signed_and_dated, date_signed, form_validation_result
             ) values (
                 :caseReference, :penaltyChargeNumber, :vehicleRegistration, :applicant,
                 :locationOfContravention, :dateOfContravention, :fullName, :address, :postcode,
-                :reasonsGiven, :signedAndDated, :dateSigned
+                :reasonsGiven, :signedAndDated, :dateSigned, :formValidationResult
             )
             """, new MapSqlParameterSource()
             .addValue("caseReference", caseReference)
@@ -916,14 +931,19 @@ public class TecCaseRepository {
             .addValue("postcode", tecCase.getTimeExtensionPostcode())
             .addValue("reasonsGiven", yesNoName(tecCase.getTimeExtensionReasonsGiven()))
             .addValue("signedAndDated", yesNoName(tecCase.getTimeExtensionSignedAndDated()))
-            .addValue("dateSigned", tecCase.getTimeExtensionDateSigned()));
+            .addValue("dateSigned", tecCase.getTimeExtensionDateSigned())
+            .addValue(
+                "formValidationResult",
+                formValidationResultToStore(tecCase.getFormValidationResultMessage())
+            ));
     }
 
     private Te9CaseDetails findCurrentTe9(long caseReference) {
         List<Te9CaseDetails> rows = database.query("""
             select penalty_charge_number, date_received, type, te7_submitted, vehicle_registration,
                    applicant, location_of_contravention, date_of_contravention, title, full_name,
-                   company_name, address, postcode, declaration, date_paid, how_paid, paid_to
+                   company_name, address, postcode, declaration, date_paid, how_paid, paid_to,
+                   form_validation_result
               from tec_case_te9
              where case_reference = :caseReference
              order by %s
@@ -951,6 +971,7 @@ public class TecCaseRepository {
                 details.setDatePaid(localDate(resultSet, "date_paid"));
                 details.setHowPaid(resultSet.getString("how_paid"));
                 details.setPaidTo(resultSet.getString("paid_to"));
+                details.setFormValidationResultDisplay(resultSet.getString("form_validation_result"));
                 return details;
             });
         return rows.isEmpty() ? null : rows.get(0);
@@ -961,7 +982,7 @@ public class TecCaseRepository {
             select penalty_charge_number, date_received, type, te7_submitted, vehicle_registration,
                    applicant, location_of_contravention, date_of_contravention, title, full_name,
                    company_name, address, postcode, declaration, reasons_given,
-                   date_paid, how_paid, paid_to
+                   date_paid, how_paid, paid_to, form_validation_result
               from tec_case_pe3
              where case_reference = :caseReference
              order by %s
@@ -990,6 +1011,7 @@ public class TecCaseRepository {
                 details.setDatePaid(localDate(resultSet, "date_paid"));
                 details.setHowPaid(resultSet.getString("how_paid"));
                 details.setPaidTo(resultSet.getString("paid_to"));
+                details.setFormValidationResultDisplay(resultSet.getString("form_validation_result"));
                 return details;
             });
         return rows.isEmpty() ? null : rows.get(0);
@@ -999,7 +1021,8 @@ public class TecCaseRepository {
         List<Te7CaseDetails> rows = database.query("""
             select penalty_charge_number, vehicle_registration, title, other_title, full_name,
                    company_name, address, postcode, permission_type, reasons_given,
-                   signed_and_dated, signed_by, date_signed, print_full_name
+                   signed_and_dated, signed_by, date_signed, print_full_name,
+                   form_validation_result
               from tec_case_te7
              where case_reference = :caseReference
              order by %s
@@ -1027,6 +1050,7 @@ public class TecCaseRepository {
                 );
                 details.setDateSigned(localDate(resultSet, "date_signed"));
                 details.setPrintFullName(resultSet.getString("print_full_name"));
+                details.setFormValidationResultDisplay(resultSet.getString("form_validation_result"));
                 return details;
             });
         return rows.isEmpty() ? null : rows.get(0);
@@ -1036,7 +1060,7 @@ public class TecCaseRepository {
         List<Pe2CaseDetails> rows = database.query("""
             select penalty_charge_number, vehicle_registration, applicant,
                    location_of_contravention, date_of_contravention, full_name, address, postcode,
-                   reasons_given, signed_and_dated, date_signed
+                   reasons_given, signed_and_dated, date_signed, form_validation_result
               from tec_case_pe2
              where case_reference = :caseReference
              order by %s
@@ -1056,6 +1080,7 @@ public class TecCaseRepository {
                 details.setReasonsGiven(yesNo(resultSet.getString("reasons_given")));
                 details.setSignedAndDated(yesNo(resultSet.getString("signed_and_dated")));
                 details.setDateSigned(localDate(resultSet, "date_signed"));
+                details.setFormValidationResultDisplay(resultSet.getString("form_validation_result"));
                 return details;
             });
         return rows.isEmpty() ? null : rows.get(0);
@@ -1068,5 +1093,20 @@ public class TecCaseRepository {
 
     private static <E extends Enum<E>> E enumValue(Class<E> type, String value) {
         return value == null ? null : Enum.valueOf(type, value);
+    }
+
+    private static String formValidationResultToStore(String requested) {
+        if (requested == null || requested.isBlank()) {
+            return DEFAULT_FORM_VALIDATION_RESULT;
+        }
+        String trimmed = requested.trim();
+        if (trimmed.length() > MAX_FORM_VALIDATION_RESULT_LENGTH) {
+            throw new IllegalArgumentException(
+                "Form validation result must be "
+                    + MAX_FORM_VALIDATION_RESULT_LENGTH
+                    + " characters or fewer"
+            );
+        }
+        return trimmed;
     }
 }

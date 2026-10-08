@@ -90,6 +90,14 @@ POSTCODE_RE = re.compile(
     re.IGNORECASE,
 )
 
+NAME_MISMATCH_RESULT = "Invalid - name does not match registration"
+FIELDS_MISSING_RESULT = "Invalid - fields missing"
+NOT_SIGNED_RESULT = "Invalid - application not signed"
+FOR_MORE_TIME_RESULT = (
+    "Invalid - application is for more time, expecting application to file out of time"
+)
+MISMATCHED_NAME = "JORDAN UNRELATED"
+
 TE7_SIGNATURE_BOX = (122.52, 164.24, 399.36, 193.04)
 
 
@@ -101,6 +109,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-pdf", required=True, type=Path)
     parser.add_argument("--out-payload", required=True, type=Path)
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument(
+        "--form-validation-result",
+        default=None,
+        help="Replaces the default Form valid message stored on the form",
+    )
     return parser.parse_args()
 
 
@@ -275,8 +288,16 @@ def merge_overlay(template: Path, out_pdf: Path, draw) -> None:
     merge_overlay_bytes(template.read_bytes(), out_pdf, draw)
 
 
-def build_time_extension(case_data: dict[str, Any], form: str, rng: random.Random) -> dict[str, Any]:
+def build_time_extension(
+    case_data: dict[str, Any],
+    form: str,
+    rng: random.Random,
+    form_validation_result: str | None = None,
+) -> dict[str, Any]:
+    validation_result = (form_validation_result or "").strip() or None
     name = (case_data.get("respondentDetails1") or "ALEX EXAMPLE").strip()
+    if validation_result == NAME_MISMATCH_RESULT:
+        name = MISMATCHED_NAME
     line2 = (case_data.get("respondentDetails2") or "").strip()
     line3 = (case_data.get("respondentDetails3") or "").strip()
     line4 = (case_data.get("respondentDetails4") or "").strip()
@@ -311,10 +332,12 @@ def build_time_extension(case_data: dict[str, Any], form: str, rng: random.Rando
     reasons_given = "Yes" if rng.random() >= 0.1 else "No"
     include_signature = rng.random() >= 0.05
     include_date = rng.random() >= 0.05
+    if validation_result == NOT_SIGNED_RESULT:
+        include_signature = False
+        include_date = False
     signed_and_dated = "Yes" if include_signature and include_date else "No"
 
     payload: dict[str, Any] = {
-        "formValidationResult": rng.choice(("formValid", "formInvalid")),
         "timeExtensionForm": form,
         "timeExtensionPenaltyChargeNumber": case_data.get("penaltyChargeNumber"),
         "timeExtensionVehicleRegistration": case_data.get("vehicleRegistrationNumber"),
@@ -330,6 +353,8 @@ def build_time_extension(case_data: dict[str, Any], form: str, rng: random.Rando
 
     if form == "TE7":
         permission_code, permission_label = rng.choice(TE7_PERMISSION)
+        if validation_result == FOR_MORE_TIME_RESULT:
+            permission_code, permission_label = "forMoreTime", "for more time"
         _, belief_label = rng.choice(TE7_BELIEF)
         signed_by_code, capacity = rng.choice(TE7_SIGNED_BY)
         # Prefer respondent (~70%); otherwise one of the capacity checkboxes.
@@ -357,6 +382,13 @@ def build_time_extension(case_data: dict[str, Any], form: str, rng: random.Rando
                 "timeExtensionDateOfContravention": iso(date_of_contravention),
             }
         )
+
+    if validation_result == FIELDS_MISSING_RESULT:
+        payload["timeExtensionAddress"] = None
+        payload["timeExtensionReasonsGiven"] = "No"
+        payload["_pdfReasonsText"] = ""
+    if validation_result:
+        payload["formValidationResultMessage"] = validation_result
 
     return {k: v for k, v in payload.items() if v is not None and v != ""}
 
@@ -501,7 +533,12 @@ def main() -> None:
     args = parse_args()
     rng = random.Random(args.seed)
     case_data = load_case(args.case_json)
-    payload = build_time_extension(case_data, args.form, rng)
+    payload = build_time_extension(
+        case_data,
+        args.form,
+        rng,
+        args.form_validation_result,
+    )
 
     args.out_pdf.parent.mkdir(parents=True, exist_ok=True)
     args.out_payload.parent.mkdir(parents=True, exist_ok=True)

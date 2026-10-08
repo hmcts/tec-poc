@@ -181,9 +181,16 @@ gen_application() {
   local case_reference="$1"
   local timing="$2"
   local form="$3"
+  local validation_result="${4:-}"
   echo "  generating ${timing} ${form} application on ${case_reference}..." >&2
-  "${SCRIPT_DIR}/generate-application.sh" \
-    "${case_reference}" "${timing}" "${form}" >/dev/null
+  if [[ -n "${validation_result}" ]]; then
+    FORM_VALIDATION_RESULT="${validation_result}" \
+      "${SCRIPT_DIR}/generate-application.sh" \
+      "${case_reference}" "${timing}" "${form}" >/dev/null
+  else
+    "${SCRIPT_DIR}/generate-application.sh" \
+      "${case_reference}" "${timing}" "${form}" >/dev/null
+  fi
 }
 
 # A registration batch used by one registration only.
@@ -222,9 +229,16 @@ add_registration_after_te9() {
 gen_time_extension() {
   local case_reference="$1"
   local form="$2"
+  local validation_result="${3:-}"
   echo "  generating ${form} time extension on ${case_reference}..." >&2
-  "${SCRIPT_DIR}/generate-time-extension.sh" \
-    "${case_reference}" "${form}" >/dev/null
+  if [[ -n "${validation_result}" ]]; then
+    FORM_VALIDATION_RESULT="${validation_result}" \
+      "${SCRIPT_DIR}/generate-time-extension.sh" \
+      "${case_reference}" "${form}" >/dev/null
+  else
+    "${SCRIPT_DIR}/generate-time-extension.sh" \
+      "${case_reference}" "${form}" >/dev/null
+  fi
 }
 
 # N244 on the five OOT-appeal demos. Same path as enter-general-application.sh:
@@ -525,8 +539,9 @@ seed_catalogue() {
   echo "Seeding pcn-awaiting-oot-validation..." >&2
   ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
-  gen_application "${ref}" "out of time" TE9
-  gen_time_extension "${ref}" TE7
+  gen_application "${ref}" "out of time" TE9 "Invalid - fields missing"
+  gen_time_extension "${ref}" TE7 \
+    "Invalid - application is for more time, expecting application to file out of time"
   state="$(state_from_json_cmd AWAITING_OOT_VALIDATION \
     "${SCRIPT_DIR}/set-case-state.sh" "${ref}" AWAITING_OOT_VALIDATION)"
   record_entry \
@@ -535,13 +550,13 @@ seed_catalogue() {
     "TEC" \
     "${state}" \
     "${ref}" \
-    "Out-of-time application waiting for a clerk to check the forms. Applications has an OOT TE9 and a TE7. Next steps offers Edit TE9 application, Edit TE7 application, and Validate OOT application."
+    "Out-of-time application waiting for a clerk to check the forms. The TE9 form validation result is Invalid - fields missing. The TE7 is an application for more time, so its result is Invalid - application is for more time, expecting application to file out of time. Next steps offers Edit TE9 application, Edit TE7 application, and Validate OOT application."
 
   echo "Seeding pcn-awaiting-oot-validation-pe..." >&2
   ref="$(require_demo_pcn)"
   link_pcn_to_batch "${ref}" "${reg_batch_ref}"
-  gen_application "${ref}" "out of time" PE3
-  gen_time_extension "${ref}" PE2
+  gen_application "${ref}" "out of time" PE3 "Invalid - name does not match registration"
+  gen_time_extension "${ref}" PE2 "Invalid - application not signed"
   state="$(state_from_json_cmd AWAITING_OOT_VALIDATION \
     "${SCRIPT_DIR}/set-case-state.sh" "${ref}" AWAITING_OOT_VALIDATION)"
   record_entry \
@@ -550,7 +565,7 @@ seed_catalogue() {
     "TEC" \
     "${state}" \
     "${ref}" \
-    "Out-of-time statutory declaration waiting for a clerk to check the forms. Applications has an OOT PE3 and a PE2. Next steps offers Edit PE3 application, Edit PE2 application, and Validate OOT application."
+    "Out-of-time statutory declaration waiting for a clerk to check the forms. The PE3 form validation result is Invalid - name does not match registration. The PE2 result is Invalid - application not signed. Next steps offers Edit PE3 application, Edit PE2 application, and Validate OOT application."
 
   echo "Seeding pcn-awaiting-la-oot..." >&2
   ref="$(require_demo_pcn)"

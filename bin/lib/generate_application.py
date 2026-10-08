@@ -126,6 +126,11 @@ POSTCODE_RE = re.compile(
     re.IGNORECASE,
 )
 
+NAME_MISMATCH_RESULT = "Invalid - name does not match registration"
+FIELDS_MISSING_RESULT = "Invalid - fields missing"
+NOT_SIGNED_RESULT = "Invalid - application not signed"
+MISMATCHED_NAME = "JORDAN UNRELATED"
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -136,6 +141,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-pdf", required=True, type=Path)
     parser.add_argument("--out-payload", required=True, type=Path)
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument(
+        "--form-validation-result",
+        default=None,
+        help="Replaces the default Form valid message stored on the form",
+    )
     return parser.parse_args()
 
 
@@ -180,8 +190,17 @@ def split_postcode(postcode: str) -> tuple[str, str]:
     return postcode, ""
 
 
-def build_application(case_data: dict[str, Any], timeliness: str, form: str, rng: random.Random) -> dict[str, Any]:
+def build_application(
+    case_data: dict[str, Any],
+    timeliness: str,
+    form: str,
+    rng: random.Random,
+    form_validation_result: str | None = None,
+) -> dict[str, Any]:
+    validation_result = (form_validation_result or "").strip() or None
     name = (case_data.get("respondentDetails1") or "ALEX EXAMPLE").strip()
+    if validation_result == NAME_MISMATCH_RESULT:
+        name = MISMATCHED_NAME
     line2 = (case_data.get("respondentDetails2") or "").strip()
     line3 = (case_data.get("respondentDetails3") or "").strip()
     line4 = (case_data.get("respondentDetails4") or "").strip()
@@ -259,6 +278,16 @@ def build_application(case_data: dict[str, Any], timeliness: str, form: str, rng
         payload["applicationDatePaid"] = iso(date_of_contravention + timedelta(days=rng.randint(1, 20)))
         payload["applicationHowPaid"] = rng.choice(HOW_PAID)
         payload["applicationPaidTo"] = rng.choice(PAID_TO)
+
+    if validation_result == FIELDS_MISSING_RESULT:
+        payload["applicationLocationOfContravention"] = None
+        payload["applicationAddress"] = None
+        payload["applicationDeclaration"] = None
+        payload["_pdfDeclarations"] = []
+    if validation_result == NOT_SIGNED_RESULT:
+        payload["_pdfIncludeSignature"] = False
+    if validation_result:
+        payload["formValidationResultMessage"] = validation_result
 
     # Drop nulls so CCD optional fields stay omitted
     return {k: v for k, v in payload.items() if v is not None and v != ""}
@@ -407,7 +436,8 @@ def fill_te9(template: Path, out_pdf: Path, payload: dict[str, Any]) -> None:
     # Below Signed: always strike "(person signing on behalf of the witness)".
     strike_rect(c, TE9_STRIKE_WITNESS_BELIEVES)
     strike_rect(c, TE9_STRIKE_ON_BEHALF)
-    draw_signature_squiggle(c, TE9_SIGNATURE_BOX)
+    if payload.get("_pdfIncludeSignature", True):
+        draw_signature_squiggle(c, TE9_SIGNATURE_BOX)
     c.save()
     packet.seek(0)
     page.merge_page(PdfReader(packet).pages[0])
@@ -507,7 +537,8 @@ def stamp_pe3(template: Path, out_pdf: Path, payload: dict[str, Any]) -> None:
             # Sit in the Dated cell, clear of the "Dated:" label.
             c.drawString(400.0, 250.0, dated)
 
-        draw_signature_squiggle(c, pe3_signature_box)
+        if payload.get("_pdfIncludeSignature", True):
+            draw_signature_squiggle(c, pe3_signature_box)
 
     merge_overlay(template, out_pdf, draw)
 
@@ -516,7 +547,13 @@ def main() -> None:
     args = parse_args()
     rng = random.Random(args.seed)
     case_data = load_case(args.case_json)
-    payload = build_application(case_data, args.type, args.form, rng)
+    payload = build_application(
+        case_data,
+        args.type,
+        args.form,
+        rng,
+        args.form_validation_result,
+    )
 
     args.out_pdf.parent.mkdir(parents=True, exist_ok=True)
     args.out_payload.parent.mkdir(parents=True, exist_ok=True)

@@ -534,7 +534,8 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .optional(TecCase::getApplicationReasonsGiven)
             .optional(TecCase::getApplicationDatePaid)
             .optional(TecCase::getApplicationHowPaid)
-            .optional(TecCase::getApplicationPaidTo);
+            .optional(TecCase::getApplicationPaidTo)
+            .optional(TecCase::getFormValidationResultMessage);
 
         builder.decentralisedEvent("recordTimeExtension", this::recordTimeExtension)
             .forStates(CaseState.values())
@@ -543,6 +544,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .grant(Permission.CRUD, UserRole.SYSTEM)
             .fields()
             .optional(TecCase::getFormValidationResult)
+            .optional(TecCase::getFormValidationResultMessage)
             .optional(TecCase::getTimeExtensionForm)
             .optional(TecCase::getTimeExtensionPenaltyChargeNumber)
             .optional(TecCase::getTimeExtensionVehicleRegistration)

@@ -124,10 +124,10 @@ The event handlers update TEC-owned data as follows:
 | `attachCaseFileDocument` | `caseFileDocument` (CCD Document with `category_id`) | Inserts `public.tec_case_document` | unchanged |
 | `linkBatchCase` | `batchLinkCase` (`CaseLink`) + `batchLinkType` (`BatchOperation`, must match the batch) | Registration: sets the current `public.tec_case_registration.batch_case_reference` when that row has no other batch. Other types: upserts `public.tec_batch_pcn_link` | `TRANSFER_REQUEST` → `REFER_FOR_ENFORCEMENT`; `CASE_CLOSURE_REQUESTS` → `CLOSED`; otherwise unchanged |
 | `addRegistration` | New registration fields (system). PCN is the stem plus the next suffix | Inserts `public.tec_case_registration`. Does not change case-list columns. Payment defaults to `PENDING` | unchanged |
-| `recordApplication` | Optional TE9/PE3 OCR application fields. Form PCN must match the current registration | Inserts `public.tec_case_te9` or `public.tec_case_pe3` | unchanged |
+| `recordApplication` | Optional TE9/PE3 OCR application fields, including `formValidationResultMessage` (blank stores `Form valid`). Form PCN must match the current registration | Inserts `public.tec_case_te9` or `public.tec_case_pe3` | unchanged |
 | `editTe9Application` | Optional TE9 application fields (clerk; no PCN) | Updates the current TE9 row except form and PCN | unchanged |
 | `editPe3Application` | Optional PE3 application fields (clerk; no PCN) | Updates the current PE3 row except form and PCN | unchanged |
-| `recordTimeExtension` | Optional TE7/PE2 time-extension fields. Form PCN must match the current registration | Inserts `public.tec_case_te7` or `public.tec_case_pe2` | unchanged |
+| `recordTimeExtension` | Optional TE7/PE2 time-extension fields, including `formValidationResultMessage` (blank stores `Form valid`). Form PCN must match the current registration | Inserts `public.tec_case_te7` or `public.tec_case_pe2` | unchanged |
 | `editTe7Application` | Optional TE7 fields (clerk; no PCN) | Updates the current TE7 row except form and PCN | unchanged |
 | `editPe2Application` | Optional PE2 fields (clerk; no PCN) | Updates the current PE2 row except form and PCN | unchanged |
 | `applyWarrantAuthorisation` | `warrantAuthorisation` (date of issue, date of expiry, status) | Inserts `public.tec_case_warrant_authorisation` | `active` → `WARRANT_AUTHORISATION_ISSUED`; `expired` → `WARRANT_AUTHORISATION_EXPIRED`; `cancelled` → unchanged |
@@ -170,12 +170,16 @@ details, and vehicle registration stay as they were at create. Local seeding use
 `recordApplication` is likewise system-only and hidden from ExUI. Integrations submit OCR-extracted
 TE9 or PE3 fields via this event. Each submit inserts a new row. Case details shows the current
 TE9 and the current PE3 (highest PCN suffix, then latest `created_at`) in their own sections.
+`formValidationResultMessage` is optional. A blank value is stored as **Form valid** on that row.
+`bin/generate-application.sh` sends it from `FORM_VALIDATION_RESULT`.
 
 `recordTimeExtension` is system-only and hidden from ExUI. Integrations submit OCR-extracted TE7 or
 PE2 fields via this event. Each submit inserts a new row. Case details shows the current TE7 and
 the current PE2 under a heading driven by the form
 (**Application to file out of time** / **Application for extension of time** for TE7 by permission
 sought; **Application to file out of time** for PE2).
+`formValidationResultMessage` is stored the same way.
+`bin/generate-time-extension.sh` sends it from `FORM_VALIDATION_RESULT`.
 
 `editTe9Application`, `editPe3Application`, `editTe7Application`, and `editPe2Application` are
 clerk-facing and appear in Manage Case Next steps when that form exists on the case, including
@@ -245,14 +249,16 @@ SDK does not prepend it):
   section immediately below Registration with **Decision** **Refused**; then the current TE9, if any
   (**Witness statement - In time** or **Out of time**), and the current PE3, if any
   (**Statutory declaration - In time** or **Out of time**). Each visible form section starts with
-  **Form validation result** (the shared case value) and then that form's fields (date received, type,
+  **Form validation result** (that form's own message, default **Form valid**, stored when the form
+  is recorded) and then that form's fields (date received, type,
   form, PCN/VRN, applicant and address, declaration, and conditional fields such as TE7 submitted, PE3
   reasons given, and TE9 payment details). Then the current TE7, if any, headed by permission sought
   (**Application to file out of time** or **Application for extension of time**), and the current PE2,
   if any (**Application to file out of time**), again with **Form validation result** at the top, then
   form, PCN/VRN, respondent details, permission sought, reasons given, signed and dated,
-  signed by, and related fields. Form validation is changed only via **Validate OOT application**, not
-  the form-specific edit events. When one or more warrant authorisations exist, a **Warrant
+  signed by, and related fields. The per-form message is not changed by the form-specific edit events.
+  **Validate OOT application** still records the separate case-level **Form valid** / **Form invalid**
+  choice used by Tasks. When one or more warrant authorisations exist, a **Warrant
   authorisations** section at the bottom lists each entry's date of issue, date of expiry, and status
   (from `tec_case_warrant_authorisation`).
 - **Case File View**: document viewer component. Folders are defined as CCD categories in

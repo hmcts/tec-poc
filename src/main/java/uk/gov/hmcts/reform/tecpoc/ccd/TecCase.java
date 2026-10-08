@@ -286,6 +286,13 @@ public class TecCase {
     @CCD(label = "To whom it was paid", searchable = false)
     private String applicationPaidTo;
 
+    /**
+     * Message stored on the TE9, PE3, TE7, or PE2 row recorded by this event.
+     * Blank is stored as {@code Form valid}.
+     */
+    @CCD(label = "Form validation result", searchable = false)
+    private String formValidationResultMessage;
+
     @CCD(
         label = "Form",
         typeOverride = FieldType.FixedList,
