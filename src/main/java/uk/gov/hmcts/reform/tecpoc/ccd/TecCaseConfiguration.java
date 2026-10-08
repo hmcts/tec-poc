@@ -335,6 +335,9 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .mandatory(TecCase::getBatchIdentifier)
             .mandatory(TecCase::getPenaltyChargeNumber)
             .optional(TecCase::getPcnStem, NEVER_SHOW)
+            // Null is sent on create so ExUI can treat the collection as empty.
+            // A tab-only field is read-only, and CCD rejects that submit.
+            .optional(TecCase::getPreviousRegistrations, NEVER_SHOW)
             .mandatory(TecCase::getLocalAuthority)
             .mandatory(TecCase::getRespondentDetails1)
             .mandatory(TecCase::getRespondentDetails2)
