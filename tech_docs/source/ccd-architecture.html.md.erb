@@ -98,6 +98,7 @@ ExUI Case list / Find case expose a **case type** filter. Fresh sessions prefera
 [exui-navigation](/exui-navigation.html).
 
 Most system events use `[STATE]="NEVER_SHOW"`. Clerk-visible PCN events include `enterGeneralApplication`
+and `uploadAdditionalInformation`
 (every state), `verifyFormValidation`,
 `reviewOotRefusalDecision` (only in `PENDING_REFUSAL_DECISION`),
 and the form-specific edit events (`editTe9Application`, `editPe3Application`, `editTe7Application`,
@@ -133,6 +134,7 @@ The event handlers update TEC-owned data as follows:
 | `applyWarrantAuthorisation` | `warrantAuthorisation` (date of issue, date of expiry, status) | Inserts `public.tec_case_warrant_authorisation` | `active` → `WARRANT_AUTHORISATION_ISSUED`; `expired` → `WARRANT_AUTHORISATION_EXPIRED`; `cancelled` → unchanged |
 | `setCaseState` | `targetCaseState` | None (prototype helper) | the requested `CaseState` |
 | `enterGeneralApplication` | General application form (applicant, type, fee, consent, uploaded N244) | Inserts `public.tec_case_general_application` with state `GEN_APP_ISSUED`; N244 goes to `tec_case_document` category `applications`, related evidence to `uncategorisedDocuments` | unchanged |
+| `uploadAdditionalInformation` | Document collection. When the case has general applications, a dropdown of those applications plus **Not related to an application** | Each file is inserted into `public.tec_case_document`. Not related, or a case with no applications: category `uncategorisedDocuments` and no application link. A chosen application: category `applications`, `general_application_id` set, filename `{basename} GA{rank}.{ext}` | unchanged |
 
 `attachCaseFileDocument` is system-only and hidden from ExUI (`NEVER_SHOW`). Local uploads use
 `bin/attach-case-file-document.sh`, which posts the file to Case Document AM (`:4455`) then submits
@@ -265,7 +267,12 @@ SDK does not prepend it):
   `CaseFileCategory` (Hearing documents, Orders and notices of hearings, Applications,
   Correspondence, Uncategorised) and registered via `builder.categories(...)` in
   `TecCaseConfiguration`. Documents appear when `TecCaseView` exposes `allDocuments` from
-  `tec_case_document` with matching `category_id` values.
+  `tec_case_document` with matching `category_id` values. Clerks add files with
+  **Upload additional information**. A file that is not tied to an application is stored
+  with category `uncategorisedDocuments` and appears in **Uncategorised**. A file tied to
+  an existing general application is stored with `general_application_id` and category
+  `applications`, and the filename gains `GA{rank}` so the folder listing shows which
+  application it belongs to.
 - **History**: CCD case-event history (`CaseHistory` / `caseHistory`), placed after Case File View.
 - **Linked Cases**: ExUI `ComponentLauncher` + `caseLinks` collection (`#ARGUMENT(LinkedCases)`).
   Batch links are owned by the batch case (see below); a PCN can appear under ExUI **linked from**

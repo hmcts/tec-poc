@@ -4,6 +4,7 @@ import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -508,12 +509,25 @@ public class TecCaseRepository {
         String documentBinaryUrl,
         String filename
     ) {
+        return insertDocument(caseReference, categoryId, documentUrl, documentBinaryUrl, filename, null);
+    }
+
+    public UUID insertDocument(
+        long caseReference,
+        String categoryId,
+        String documentUrl,
+        String documentBinaryUrl,
+        String filename,
+        UUID generalApplicationId
+    ) {
         UUID id = UUID.randomUUID();
         database.update("""
             insert into tec_case_document (
-                id, case_reference, category_id, document_url, document_binary_url, filename
+                id, case_reference, category_id, document_url, document_binary_url, filename,
+                general_application_id
             ) values (
-                :id, :caseReference, :categoryId, :documentUrl, :documentBinaryUrl, :filename
+                :id, :caseReference, :categoryId, :documentUrl, :documentBinaryUrl, :filename,
+                cast(:generalApplicationId as uuid)
             )
             """, new MapSqlParameterSource()
             .addValue("id", id)
@@ -521,7 +535,12 @@ public class TecCaseRepository {
             .addValue("categoryId", categoryId)
             .addValue("documentUrl", documentUrl)
             .addValue("documentBinaryUrl", documentBinaryUrl)
-            .addValue("filename", filename));
+            .addValue("filename", filename)
+            .addValue(
+                "generalApplicationId",
+                generalApplicationId == null ? null : generalApplicationId.toString(),
+                Types.VARCHAR
+            ));
         return id;
     }
 

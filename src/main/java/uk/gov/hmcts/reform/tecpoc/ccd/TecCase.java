@@ -13,6 +13,7 @@ import uk.gov.hmcts.ccd.sdk.api.CCD;
 import uk.gov.hmcts.ccd.sdk.type.CaseLink;
 import uk.gov.hmcts.ccd.sdk.type.ComponentLauncher;
 import uk.gov.hmcts.ccd.sdk.type.Document;
+import uk.gov.hmcts.ccd.sdk.type.DynamicList;
 import uk.gov.hmcts.ccd.sdk.type.FieldType;
 import uk.gov.hmcts.ccd.sdk.type.FlagLauncher;
 import uk.gov.hmcts.ccd.sdk.type.Flags;
@@ -425,6 +426,41 @@ public class TecCase {
      */
     @CCD(label = "Case file document", searchable = false)
     private Document caseFileDocument;
+
+    /**
+     * Set by {@code uploadAdditionalInformation} about-to-start. Yes when the case
+     * already has general applications, so the application question is shown.
+     */
+    @CCD(
+        label = "Show related applications",
+        typeOverride = FieldType.FixedRadioList,
+        typeParameterOverride = "YesNo",
+        searchable = false,
+        retainHiddenValue = true
+    )
+    private YesNo showRelatedApplications;
+
+    /**
+     * Event-only choice for {@code uploadAdditionalInformation}. Option codes are
+     * general application ids, plus a sentinel for not related to an application.
+     */
+    @CCD(
+        label = "Which application do these documents relate to?",
+        typeOverride = FieldType.DynamicList,
+        searchable = false
+    )
+    private DynamicList relatedApplication;
+
+    /**
+     * Event-only uploads for {@code uploadAdditionalInformation}.
+     */
+    @CCD(
+        label = "Upload additional information",
+        typeOverride = FieldType.Collection,
+        typeParameterOverride = "Document",
+        searchable = false
+    )
+    private List<ListValue<Document>> additionalInformation;
 
     @CCD(label = "Case file view")
     private ComponentLauncher caseFileView;

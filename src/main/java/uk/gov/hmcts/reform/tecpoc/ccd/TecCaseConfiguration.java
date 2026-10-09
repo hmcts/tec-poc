@@ -12,12 +12,18 @@ import uk.gov.hmcts.ccd.sdk.api.callback.AboutToStartOrSubmitResponse;
 import uk.gov.hmcts.ccd.sdk.api.callback.SubmitResponse;
 import uk.gov.hmcts.ccd.sdk.type.CaseLink;
 import uk.gov.hmcts.ccd.sdk.type.Document;
+import uk.gov.hmcts.ccd.sdk.type.DynamicList;
+import uk.gov.hmcts.ccd.sdk.type.DynamicListElement;
 import uk.gov.hmcts.ccd.sdk.type.ListValue;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 
 @Component
 public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserRole> {
@@ -35,6 +41,15 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
         "Date the application was received must be in the past";
     private static final String FEE_MUST_BE_RECEIVED =
         "You must request payment from the applicant before entering this application";
+
+    /**
+     * DynamicList codes are UUIDs. This sentinel is the "Not related to an application" option.
+     */
+    static final UUID NOT_RELATED_APPLICATION =
+        UUID.fromString("00000000-0000-0000-0000-000000000000");
+
+    private static final DateTimeFormatter APPLICATION_RECEIVED_DATE =
+        DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.UK);
 
     /**
      * GOV.UK Notify personalisation for the respondent's name. Notify substitutes
@@ -603,6 +618,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .mandatory(TecCase::getTargetCaseState);
 
         configureEnterGeneralApplication(builder);
+        configureUploadAdditionalInformation(builder);
     }
 
     private void configureEnterGeneralApplication(
@@ -1101,6 +1117,131 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
                 CaseFileCategory.UNCATEGORISED.getId()
             );
         }
+    }
+
+    private void configureUploadAdditionalInformation(
+        DecentralisedConfigBuilder<TecCase, CaseState, UserRole> builder
+    ) {
+        builder.decentralisedEvent(
+                "uploadAdditionalInformation",
+                this::uploadAdditionalInformation,
+                this::startUploadAdditionalInformation
+            )
+            .forStates(CaseState.values())
+            .name("Upload additional information")
+            .description("Upload documents and optionally attach them to an existing application")
+            .showSummary()
+            .grant(Permission.CRU, UserRole.CLERK)
+            .fields()
+            .page("relatedApplication")
+            .pageLabel("Which application do these documents relate to?")
+            .showCondition("showRelatedApplications=\"Yes\"")
+            .mandatory(TecCase::getRelatedApplication)
+            .page("uploadAdditionalInformation")
+            .pageLabel("Upload additional information")
+            .readonly(TecCase::getShowRelatedApplications, NEVER_SHOW, true)
+            .mandatory(TecCase::getAdditionalInformation);
+    }
+
+    private TecCase startUploadAdditionalInformation(EventPayload<TecCase, CaseState> event) {
+        TecCase data = event.caseData();
+        List<TecCaseGeneralApplication> applications =
+            repository.findGeneralApplications(event.caseReference());
+        if (applications.isEmpty()) {
+            data.setShowRelatedApplications(YesNo.NO);
+            data.setRelatedApplication(null);
+        } else {
+            data.setShowRelatedApplications(YesNo.YES);
+            data.setRelatedApplication(relatedApplicationList(applications));
+        }
+        data.setAdditionalInformation(null);
+        return withoutUnvalidatableDisplayFields(data);
+    }
+
+    private SubmitResponse<CaseState> uploadAdditionalInformation(EventPayload<TecCase, CaseState> event) {
+        List<ListValue<Document>> documents = event.caseData().getAdditionalInformation();
+        if (documents == null || documents.isEmpty()) {
+            throw new IllegalArgumentException("additionalInformation is required");
+        }
+        long caseReference = event.caseReference();
+        UUID applicationId = selectedApplicationId(event.caseData());
+        TecCaseGeneralApplication application = applicationId == null
+            ? null
+            : requireApplicationOnCase(caseReference, applicationId);
+        String categoryId = application == null
+            ? CaseFileCategory.UNCATEGORISED.getId()
+            : CaseFileCategory.APPLICATIONS.getId();
+        for (ListValue<Document> item : documents) {
+            Document document = item == null ? null : item.getValue();
+            requireDocument(document, "additionalInformation");
+            String filename = application == null
+                ? document.getFilename()
+                : filenameForApplication(document.getFilename(), application.rank());
+            repository.insertDocument(
+                caseReference,
+                categoryId,
+                CdamDocumentUrls.toCdamUrl(document.getUrl()),
+                CdamDocumentUrls.toCdamUrl(document.getBinaryUrl()),
+                filename,
+                applicationId
+            );
+        }
+        return SubmitResponse.defaultResponse();
+    }
+
+    private UUID selectedApplicationId(TecCase data) {
+        if (data.getShowRelatedApplications() != YesNo.YES) {
+            return null;
+        }
+        DynamicList relatedApplication = data.getRelatedApplication();
+        UUID code = relatedApplication == null ? null : relatedApplication.getValueCode();
+        if (code == null) {
+            throw new IllegalArgumentException("relatedApplication is required");
+        }
+        if (NOT_RELATED_APPLICATION.equals(code)) {
+            return null;
+        }
+        return code;
+    }
+
+    private TecCaseGeneralApplication requireApplicationOnCase(long caseReference, UUID applicationId) {
+        return repository.findGeneralApplications(caseReference).stream()
+            .filter(application -> applicationId.equals(application.id()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException(
+                "No general application " + applicationId + " on case " + caseReference
+            ));
+    }
+
+    private static DynamicList relatedApplicationList(List<TecCaseGeneralApplication> applications) {
+        List<DynamicListElement> items = new ArrayList<>();
+        for (TecCaseGeneralApplication application : applications) {
+            items.add(DynamicListElement.builder()
+                .code(application.id())
+                .label(applicationLabel(application))
+                .build());
+        }
+        items.add(DynamicListElement.builder()
+            .code(NOT_RELATED_APPLICATION)
+            .label("Not related to an application")
+            .build());
+        return DynamicList.builder().listItems(items).build();
+    }
+
+    private static String applicationLabel(TecCaseGeneralApplication application) {
+        return "General Application GA%d - %s - received %s".formatted(
+            application.rank(),
+            application.applicant().getLabel(),
+            APPLICATION_RECEIVED_DATE.format(application.dateReceived())
+        );
+    }
+
+    static String filenameForApplication(String originalFilename, int rank) {
+        int dot = originalFilename.lastIndexOf('.');
+        if (dot <= 0) {
+            return originalFilename + " GA" + rank;
+        }
+        return originalFilename.substring(0, dot) + " GA" + rank + originalFilename.substring(dot);
     }
 
     private void insertCaseFileDocument(long caseReference, Document document, String categoryId) {

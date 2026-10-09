@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -13,6 +14,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import org.assertj.core.groups.Tuple;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -21,6 +23,8 @@ import uk.gov.hmcts.ccd.sdk.api.EventPayload;
 import uk.gov.hmcts.ccd.sdk.api.callback.AboutToStartOrSubmitResponse;
 import uk.gov.hmcts.ccd.sdk.api.callback.SubmitResponse;
 import uk.gov.hmcts.ccd.sdk.type.Document;
+import uk.gov.hmcts.ccd.sdk.type.DynamicList;
+import uk.gov.hmcts.ccd.sdk.type.DynamicListElement;
 import uk.gov.hmcts.ccd.sdk.type.FlagLauncher;
 import uk.gov.hmcts.ccd.sdk.type.Flags;
 import uk.gov.hmcts.ccd.sdk.type.ListValue;
@@ -316,6 +320,121 @@ class TecCaseConfigurationTest {
     }
 
     @Test
+    void uploadAdditionalInformationListsExistingApplications() {
+        UUID applicationId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        when(repository.findGeneralApplications(40L)).thenReturn(List.of(
+            issuedApplication(applicationId, 2)
+        ));
+
+        TecCase started = startUploadAdditionalInformation(40L, new TecCase());
+
+        assertThat(started.getShowRelatedApplications()).isEqualTo(YesNo.YES);
+        assertThat(started.getRelatedApplication().getListItems())
+            .extracting(DynamicListElement::getCode, DynamicListElement::getLabel)
+            .containsExactly(
+                Tuple.tuple(
+                    applicationId,
+                    "General Application GA2 - Local authority - received 4 March 2026"
+                ),
+                Tuple.tuple(
+                    TecCaseConfiguration.NOT_RELATED_APPLICATION,
+                    "Not related to an application"
+                )
+            );
+    }
+
+    @Test
+    void uploadAdditionalInformationHidesApplicationListWhenCaseHasNone() {
+        when(repository.findGeneralApplications(41L)).thenReturn(List.of());
+
+        TecCase started = startUploadAdditionalInformation(41L, new TecCase());
+
+        assertThat(started.getShowRelatedApplications()).isEqualTo(YesNo.NO);
+        assertThat(started.getRelatedApplication()).isNull();
+    }
+
+    @Test
+    void uploadAdditionalInformationStoresUnrelatedDocumentsAsUncategorised() {
+        Document document = document("witness.pdf");
+        TecCase data = new TecCase();
+        data.setShowRelatedApplications(YesNo.YES);
+        data.setRelatedApplication(selectedApplication(TecCaseConfiguration.NOT_RELATED_APPLICATION));
+        data.setAdditionalInformation(List.of(
+            ListValue.<Document>builder().value(document).build()
+        ));
+
+        SubmitResponse<CaseState> response = uploadAdditionalInformation(42L, data);
+
+        verify(repository).insertDocument(
+            eq(42L),
+            eq(CaseFileCategory.UNCATEGORISED.getId()),
+            eq(document.getUrl()),
+            eq(document.getBinaryUrl()),
+            eq("witness.pdf"),
+            isNull()
+        );
+        assertThat(response.getState()).isNull();
+    }
+
+    @Test
+    void uploadAdditionalInformationLinksDocumentToApplication() {
+        UUID applicationId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+        when(repository.findGeneralApplications(43L)).thenReturn(List.of(
+            issuedApplication(applicationId, 2)
+        ));
+        Document document = document("witness.pdf");
+        TecCase data = new TecCase();
+        data.setShowRelatedApplications(YesNo.YES);
+        data.setRelatedApplication(selectedApplication(applicationId));
+        data.setAdditionalInformation(List.of(
+            ListValue.<Document>builder().value(document).build()
+        ));
+
+        SubmitResponse<CaseState> response = uploadAdditionalInformation(43L, data);
+
+        verify(repository).insertDocument(
+            eq(43L),
+            eq(CaseFileCategory.APPLICATIONS.getId()),
+            eq(document.getUrl()),
+            eq(document.getBinaryUrl()),
+            eq("witness GA2.pdf"),
+            eq(applicationId)
+        );
+        assertThat(response.getState()).isNull();
+    }
+
+    @Test
+    void uploadAdditionalInformationRejectsUnknownApplication() {
+        UUID applicationId = UUID.fromString("33333333-3333-3333-3333-333333333333");
+        when(repository.findGeneralApplications(44L)).thenReturn(List.of());
+        TecCase data = new TecCase();
+        data.setShowRelatedApplications(YesNo.YES);
+        data.setRelatedApplication(selectedApplication(applicationId));
+        data.setAdditionalInformation(List.of(
+            ListValue.<Document>builder().value(document("witness.pdf")).build()
+        ));
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> uploadAdditionalInformation(44L, data)
+        );
+        verify(repository, never()).insertDocument(anyLong(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void uploadAdditionalInformationRejectsMissingDocument() {
+        TecCase data = new TecCase();
+        data.setShowRelatedApplications(YesNo.NO);
+        data.setAdditionalInformation(List.of());
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> uploadAdditionalInformation(45L, data)
+        );
+        verify(repository, never()).insertDocument(anyLong(), any(), any(), any(), any());
+    }
+
+    @Test
     void enterGeneralApplicationRejectsUnpaidFee() {
         GeneralApplicationEntry entry = adjournmentEntry(LocalDate.now().minusDays(1));
         entry.setFeeReceived(YesNo.NO);
@@ -386,6 +505,48 @@ class TecCaseConfigurationTest {
             ListValue.<Document>builder().value(document("evidence.pdf")).build()
         ));
         return entry;
+    }
+
+    private static TecCaseGeneralApplication issuedApplication(UUID id, int rank) {
+        return new TecCaseGeneralApplication(
+            id,
+            rank,
+            GeneralApplicationApplicant.LOCAL_AUTHORITY,
+            LocalDate.of(2026, 3, 4),
+            GeneralApplicationType.ADJOURN,
+            null,
+            null,
+            100,
+            YesNo.NO,
+            null,
+            YesNo.YES,
+            null,
+            GeneralApplicationState.GEN_APP_ISSUED
+        );
+    }
+
+    private static DynamicList selectedApplication(UUID applicationId) {
+        return DynamicList.builder()
+            .value(DynamicListElement.builder().code(applicationId).label("selected").build())
+            .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private TecCase startUploadAdditionalInformation(long caseReference, TecCase data) {
+        return (TecCase) ReflectionTestUtils.invokeMethod(
+            configuration,
+            "startUploadAdditionalInformation",
+            new EventPayload<>(caseReference, data, null)
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    private SubmitResponse<CaseState> uploadAdditionalInformation(long caseReference, TecCase data) {
+        return (SubmitResponse<CaseState>) ReflectionTestUtils.invokeMethod(
+            configuration,
+            "uploadAdditionalInformation",
+            new EventPayload<>(caseReference, data, null)
+        );
     }
 
     private static Document document(String filename) {
