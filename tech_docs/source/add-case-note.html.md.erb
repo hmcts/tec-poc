@@ -1,0 +1,49 @@
+---
+title: Add a case note
+weight: 27
+---
+
+# Add a case note
+
+A clerk appends a note to an existing TEC PCN case. The note is a row on that case. Submitting the event does not change the PCN `CaseState`, and the text is not stored as CCD case data.
+
+The caseworker journey, starting from the Case details tab, is on the design docs site: [Add a case note](http://localhost:4567/caseworker-journeys.html#journey-add-a-case-note).
+
+## Where the event appears
+
+| | |
+| --- | --- |
+| Event id | `addCaseNote` |
+| Display name | Add a case note |
+| Who can run it | Clerk (`caseworker-tec`), create, read, and update |
+| When | Every `CaseState`, including `CLOSED` |
+| Feature flags | None |
+| Case state after submit | Unchanged. The submit response is the default response and does not call `.state()` |
+
+The local authority role is not granted the event. The system role is not granted it either.
+
+## Form
+
+`TecCaseConfiguration.configureAddCaseNote` registers the event. The form is one mandatory textarea, `note`, labelled **Note**, with the hint “Add note detail, including relevant dates and people involved”.
+
+The event uses `.showSummary()` and the end button label **Submit**, so ExUI shows check your answers before submit.
+
+### Validation
+
+Continuing from the page fails when the note is longer than 500 characters: “In ‘Note’, you have entered more than the maximum number of characters (500)”. CCD rejects an empty note because the field is mandatory. Submit repeats the length check and also rejects a blank note.
+
+## What is stored
+
+Flyway `V27__create_tec_case_note.sql` creates `public.tec_case_note`, one row per note, many per `tec_case`.
+
+| Column | Meaning |
+| --- | --- |
+| `created_by` | IDAM display name (`name`) of the user who submitted the event. Taken from the callback `Authorization` header. Not sent by the form. |
+| `created_on` | UTC instant from the application clock |
+| `note` | The textarea text, at most 500 characters |
+
+`TecCaseView.getCase` clears the event textarea and rebuilds the `caseNotes` collection from `findCaseNotes`, oldest first. Each `created_on` is shown as a `Europe/London` local time, so British Summer Time displays an hour later than the stored UTC instant.
+
+The **Notes** tab is placed after Case File View and before History. It is granted to the clerk and system roles only. Local authorities already have read access to every PCN state, so the tab role list is what keeps notes off their case view. The collection is not on Case details.
+
+CCD History still records that **Add a case note** was submitted. That history entry is not the note. The note text lives only in `tec_case_note`.
