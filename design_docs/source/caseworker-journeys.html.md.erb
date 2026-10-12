@@ -53,6 +53,24 @@ How the event is stored is described in the tech docs: [Enter a general applicat
 <div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_details", locals: { caption: "11. TEC PCN — Case details", highlight_tab: :case_details, show_general_applications: true } %><p class="bf-journey__note">Case details lists the application under <strong>General applications</strong>, including state <strong>Issued</strong>. The N244 is in Case File View <strong>Applications</strong>. Related evidence is in <strong>Uncategorised</strong>.</p></div>
 </div>
 
+## Journey: Upload additional information
+
+The clerk is already on the **Case details** tab of a TEC PCN case, in any case state. They choose **Upload additional information** from the **Next step** dropdown and select **Go**. The illustrated path is a case that already has a general application, so they choose which application the documents relate to. At least one file is required. **Save and continue** does not change the case state. A file linked to an application is filed under **Applications**, and its name gains that application's rank, so `witness.pdf` for GA2 becomes `witness GA2.pdf`. **Not related to an application** files the original filename under **Uncategorised**. When the case has no general applications, the application question is skipped and every file is filed under **Uncategorised**.
+
+How the files are stored is described in the tech docs: [Case presentation and search](http://localhost:4568/ccd-architecture.html#case-presentation-and-search).
+
+<div class="bf-journey">
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_details", locals: { caption: "1. TEC PCN — Case details", highlight_tab: :case_details, highlight_next_step: true, next_step_event: "Upload additional information" } %><p class="bf-journey__note">On the <strong>Case details</strong> tab they open <strong>Next step</strong>, choose <strong>Upload additional information</strong>, and select <strong>Go</strong>.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Go</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_upload_additional_information", locals: { caption: "2. Which application do these documents relate to?", page: :application } %><p class="bf-journey__note">They choose the application. The list includes each existing application, for example <strong>General Application GA2 - Local authority - received 4 March 2026</strong>, then <strong>Not related to an application</strong>. This page is skipped when the case has no general applications.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_upload_additional_information", locals: { caption: "3. Upload additional information", page: :upload } %><p class="bf-journey__note">They upload one or more files. Continuing with none shows <strong>Upload additional information is required</strong>.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_upload_additional_information", locals: { caption: "4. Check your answers", page: :summary } %><p class="bf-journey__note">They check the answers and select <strong>Save and continue</strong>. The case state does not change.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Save and continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_file", locals: { caption: "5. TEC PCN — Case File View", highlight_tab: :case_file, added_folder: :applications, added_document: "witness GA2.pdf" } %><p class="bf-journey__note"><strong>Applications</strong> lists <strong>witness GA2.pdf</strong>. <strong>Not related to an application</strong>, and a case with no applications, lists the original filename under <strong>Uncategorised</strong>.</p></div>
+</div>
+
 ## Journey: Review an out-of-time validation failure
 
 Caseworker picks up a validation-failure task from **My work**, reviews the TE9/TE7 (or PE3/PE2) pair on Case details, compares scanned documents in Case File View, corrects OCR data via **Edit application** if needed, then completes **Validate OOT application**. **Form valid** revalidates against business rules; **Form invalid** continues to **Edit rejection email**, where they can change a draft email to the respondent. After submit they land on **History**.

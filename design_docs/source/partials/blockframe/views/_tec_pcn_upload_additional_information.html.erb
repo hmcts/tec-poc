@@ -1,0 +1,41 @@
+<%#
+  TEC PCN — Upload additional information (clerk Next step).
+  Locals:
+    caption — frame label
+    page    — :application | :upload | :summary
+%>
+<% caption = (defined?(caption) && caption) ? caption : "Event — Upload additional information" %>
+<% page = (defined?(page) && page) ? page.to_sym : :upload %>
+<% body_parts = ['<div class="bf-form bf-form--full">'] %>
+<% case page
+when :application %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Which application do these documents relate to?", callout: true }),
+  partial("partials/blockframe/field", locals: {
+    type: :dynamic_list,
+    label: "Which application do these documents relate to?",
+    title: "Which application do these documents relate to? — existing applications, then Not related to an application"
+  })
+]) %>
+<% when :upload %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Upload additional information", callout: true }),
+  partial("partials/blockframe/field", locals: {
+    type: :collection,
+    label: "Upload additional information"
+  })
+]) %>
+<% when :summary %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Check your answers", callout: true }),
+  '<div class="bf-kv" title="Related application"><span class="bf-kv__key">Which application do these documents relate to?</span><span class="bf-kv__value bf-callout">General Application GA2 - Local authority - received 4 March 2026</span></div>',
+  '<div class="bf-kv" title="Upload"><span class="bf-kv__key">Upload additional information</span><span class="bf-kv__value bf-callout">witness.pdf</span></div>'
+]) %>
+<% end %>
+<% continue_label = (page == :summary) ? "Save and continue" : "Continue" %>
+<% body_parts.concat([
+  %(<div class="bf-actions"><span class="bf-action bf-action--secondary" title="Previous"></span><span class="bf-action bf-action--primary" title="#{continue_label}"></span></div>)
+]) %>
+<% body_parts << "</div>" %>
+<% body = body_parts.join %>
+<%= partial "partials/blockframe/page", locals: { caption: caption, show_tabs: false, body: body } %>

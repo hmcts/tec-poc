@@ -1,21 +1,38 @@
 <%#
   TEC PCN — Case File View tab.
   Layout mirrors ExUI CFV: toolbar, left folder tree with documents, right media viewer.
+  Locals:
+    added_document — filename shown as the selected document
+    added_folder   — :applications or :uncategorised (default :applications)
 %>
 <% caption = (defined?(caption) && caption) ? caption : "TEC PCN — Case File View" %>
 <% highlight_tab = (defined?(highlight_tab) && highlight_tab) ? highlight_tab : nil %>
+<% added_document = (defined?(added_document) && added_document) ? added_document : nil %>
+<% added_folder = (defined?(added_folder) && added_folder) ? added_folder.to_s : "applications" %>
+<% added_html = "" %>
+<% if added_document %>
+<% safe_name = escape_html(added_document) %>
+<% added_html = %(<span class="bf-cfv__doc bf-cfv__doc--selected" title="Document: #{safe_name}">#{safe_name}</span><span class="bf-cfv__doc-meta" title="Uploaded date">Uploaded 12 Oct 2026</span>) %>
+<% end %>
+<% hearing_selected = added_document ? "" : " bf-cfv__doc--selected" %>
+<% viewer_name = added_document ? escape_html(added_document) : "Notice of hearing.pdf" %>
+<% applications_docs = '<span class="bf-cfv__doc" title="Document: TE9 application.pdf">TE9 application.pdf</span><span class="bf-cfv__doc-meta" title="Uploaded date">Uploaded 11 Sep 2026</span><span class="bf-cfv__doc" title="Document: Witness statement - Out of time.pdf">Witness statement - Out of time.pdf</span><span class="bf-cfv__doc-meta" title="Uploaded date">Uploaded 11 Sep 2026</span>' %>
+<% applications_docs += added_html if added_document && added_folder == "applications" %>
+<% uncategorised_open = added_document && added_folder == "uncategorised" %>
+<% uncategorised_class = uncategorised_open ? " bf-cfv__folder--open" : "" %>
+<% uncategorised_docs = uncategorised_open ? %(<div class="bf-cfv__docs">#{added_html}</div>) : "" %>
 <% body = [
   '<div class="bf-cfv" title="Case File View">',
   '<div class="bf-cfv__toolbar" title="Case File View toolbar"><span class="bf-cfv__toolbar-title" title="Case documents heading">Case documents</span><span class="bf-cfv__toolbar-search" title="Search documents"></span><span class="bf-cfv__toolbar-icon" title="Filter documents"></span><span class="bf-cfv__toolbar-icon" title="Sort documents"></span></div>',
   '<div class="bf-cfv__split">',
   '<div class="bf-cfv__tree" title="Document folder tree">',
-  '<div class="bf-cfv__folder" title="Folder: Hearing documents"><span class="bf-cfv__folder-label">Hearing documents</span><div class="bf-cfv__docs"><span class="bf-cfv__doc bf-cfv__doc--selected" title="Document: Notice of hearing.pdf">Notice of hearing.pdf</span><span class="bf-cfv__doc-meta" title="Uploaded date">Uploaded 10 Sep 2026</span></div></div>',
+  %(<div class="bf-cfv__folder" title="Folder: Hearing documents"><span class="bf-cfv__folder-label">Hearing documents</span><div class="bf-cfv__docs"><span class="bf-cfv__doc#{hearing_selected}" title="Document: Notice of hearing.pdf">Notice of hearing.pdf</span><span class="bf-cfv__doc-meta" title="Uploaded date">Uploaded 10 Sep 2026</span></div></div>),
   '<div class="bf-cfv__folder" title="Folder: Orders and notices of hearings"><span class="bf-cfv__folder-label">Orders and notices of hearings</span></div>',
-  '<div class="bf-cfv__folder bf-cfv__folder--open" title="Folder: Applications (expanded)"><span class="bf-cfv__folder-label">Applications</span><div class="bf-cfv__docs"><span class="bf-cfv__doc" title="Document: TE9 application.pdf">TE9 application.pdf</span><span class="bf-cfv__doc-meta" title="Uploaded date">Uploaded 11 Sep 2026</span><span class="bf-cfv__doc" title="Document: Witness statement - Out of time.pdf">Witness statement - Out of time.pdf</span><span class="bf-cfv__doc-meta" title="Uploaded date">Uploaded 11 Sep 2026</span></div></div>',
+  %(<div class="bf-cfv__folder bf-cfv__folder--open" title="Folder: Applications (expanded)"><span class="bf-cfv__folder-label">Applications</span><div class="bf-cfv__docs">#{applications_docs}</div></div>),
   '<div class="bf-cfv__folder" title="Folder: Correspondence"><span class="bf-cfv__folder-label">Correspondence</span></div>',
-  '<div class="bf-cfv__folder" title="Folder: Uncategorised"><span class="bf-cfv__folder-label">Uncategorised</span></div>',
+  %(<div class="bf-cfv__folder#{uncategorised_class}" title="Folder: Uncategorised"><span class="bf-cfv__folder-label">Uncategorised</span>#{uncategorised_docs}</div>),
   '</div>',
-  '<div class="bf-cfv__viewer" title="Document viewer"><div class="bf-cfv__viewer-toolbar" title="Media viewer toolbar"><span class="bf-cfv__viewer-chip" title="Open document name">Notice of hearing.pdf</span><span class="bf-cfv__toolbar-icon" title="Zoom out"></span><span class="bf-cfv__toolbar-icon" title="Zoom in"></span><span class="bf-cfv__toolbar-icon" title="Download"></span></div><div class="bf-cfv__viewer-page" title="Document preview page"><span class="bf-text bf-text--line" style="width: 88%" title="Preview line"></span><span class="bf-text bf-text--line" style="width: 72%" title="Preview line"></span><span class="bf-text bf-text--medium" style="width: 60%" title="Preview line"></span><span class="bf-text bf-text--short" style="width: 40%" title="Preview line"></span><span class="bf-text bf-text--line" style="width: 80%" title="Preview line"></span></div></div>',
+  %(<div class="bf-cfv__viewer" title="Document viewer"><div class="bf-cfv__viewer-toolbar" title="Media viewer toolbar"><span class="bf-cfv__viewer-chip" title="Open document name">#{viewer_name}</span><span class="bf-cfv__toolbar-icon" title="Zoom out"></span><span class="bf-cfv__toolbar-icon" title="Zoom in"></span><span class="bf-cfv__toolbar-icon" title="Download"></span></div><div class="bf-cfv__viewer-page" title="Document preview page"><span class="bf-text bf-text--line" style="width: 88%" title="Preview line"></span><span class="bf-text bf-text--line" style="width: 72%" title="Preview line"></span><span class="bf-text bf-text--medium" style="width: 60%" title="Preview line"></span><span class="bf-text bf-text--short" style="width: 40%" title="Preview line"></span><span class="bf-text bf-text--line" style="width: 80%" title="Preview line"></span></div></div>),
   '</div>',
   '</div>'
 ].join %>
