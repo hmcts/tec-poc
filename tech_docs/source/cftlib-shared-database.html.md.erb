@@ -57,7 +57,7 @@ TEC decentralised runtime (tec.ccd schema)
     |
     | invoke event handler or CaseView (TecCaseView / BatchCaseView / ExceptionCaseView)
     v
-TEC business persistence (tec.public.tec_case / tec_case_registration / tec_case_te9 / tec_case_te7 / tec_case_pe3 / tec_case_pe2 / tec_batch / tec_batch_pcn_link / tec_exception_case)
+TEC business persistence (tec.public.tec_case / tec_case_registration / tec_case_note / tec_case_te9 / tec_case_te7 / tec_case_pe3 / tec_case_pe2 / tec_batch / tec_batch_pcn_link / tec_exception_case)
 ```
 
 ## TEC business table
@@ -138,6 +138,7 @@ This separates the concerns:
 | Concern | Source of truth |
 | --- | --- |
 | PCN case identity and list fields | `tec.public.tec_case` |
+| Case notes | `tec.public.tec_case_note` |
 | Registrations | `tec.public.tec_case_registration` |
 | Received TE9 / TE7 / PE3 / PE2 | `tec.public.tec_case_te9` / `tec_case_te7` / `tec_case_pe3` / `tec_case_pe2` |
 | Batch business facts | `tec.public.tec_batch` / `tec.public.tec_batch_document` |

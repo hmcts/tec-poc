@@ -16,6 +16,8 @@ import uk.gov.hmcts.ccd.sdk.type.DynamicList;
 import uk.gov.hmcts.ccd.sdk.type.DynamicListElement;
 import uk.gov.hmcts.ccd.sdk.type.ListValue;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -41,6 +43,10 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
         "Date the application was received must be in the past";
     private static final String FEE_MUST_BE_RECEIVED =
         "You must request payment from the applicant before entering this application";
+    static final int NOTE_MAX_LENGTH = 500;
+    static final String NOTE_TOO_LONG =
+        "In ‘Note’, you have entered more than the maximum number of characters (500)";
+    static final String ADDITIONAL_INFORMATION_REQUIRED = "Upload additional information is required";
 
     /**
      * DynamicList codes are UUIDs. This sentinel is the "Not related to an application" option.
@@ -63,13 +69,19 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
 
     private final TecCaseRepository repository;
     private final BatchCaseRepository batchCaseRepository;
+    private final Clock clock;
+    private final CurrentUserName currentUserName;
 
     public TecCaseConfiguration(
         @Lazy TecCaseRepository repository,
-        @Lazy BatchCaseRepository batchCaseRepository
+        @Lazy BatchCaseRepository batchCaseRepository,
+        Clock clock,
+        CurrentUserName currentUserName
     ) {
         this.repository = repository;
         this.batchCaseRepository = batchCaseRepository;
+        this.clock = clock;
+        this.currentUserName = currentUserName;
     }
 
     @Override
@@ -285,6 +297,10 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
         builder.tab("caseFileView", "Case File View")
             .field(TecCase::getCaseFileView, null, "#ARGUMENT(CaseFileView)")
             .field(TecCase::getAllDocuments, NEVER_SHOW);
+
+        builder.tab("notes", "Notes")
+            .forRoles(UserRole.CLERK, UserRole.SYSTEM)
+            .field(TecCase::getCaseNotes);
 
         // Explicit CaseHistory so History is not prepended by the SDK.
         builder.tab("CaseHistory", "History")
@@ -618,6 +634,7 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .mandatory(TecCase::getTargetCaseState);
 
         configureEnterGeneralApplication(builder);
+        configureAddCaseNote(builder);
         configureUploadAdditionalInformation(builder);
     }
 
@@ -690,6 +707,22 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
                 "referApplicationToJudgeMessage",
                 "<p class=\"govuk-body\">You must refer this application to a judge.</p>"
             );
+    }
+
+    private void configureAddCaseNote(
+        DecentralisedConfigBuilder<TecCase, CaseState, UserRole> builder
+    ) {
+        builder.decentralisedEvent("addCaseNote", this::addCaseNote)
+            .forStates(CaseState.values())
+            .name("Add a case note")
+            .showSummary()
+            .endButtonLabel("Submit")
+            .grant(Permission.CRU, UserRole.CLERK)
+            .fields()
+            .page("addCaseNote", this::validateCaseNote)
+            .pageLabel("Add a case note")
+            .label("addCaseNoteSeparator", "---")
+            .mandatory(TecCase::getNote);
     }
 
     private SubmitResponse<CaseState> createTecCase(EventPayload<TecCase, CaseState> event) {
@@ -993,6 +1026,39 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
         return Long.parseLong(digits);
     }
 
+    private SubmitResponse<CaseState> addCaseNote(EventPayload<TecCase, CaseState> event) {
+        String note = event.caseData() == null ? null : event.caseData().getNote();
+        if (note == null || note.isBlank()) {
+            throw new IllegalArgumentException("note is required");
+        }
+        if (note.length() > NOTE_MAX_LENGTH) {
+            throw new IllegalArgumentException(NOTE_TOO_LONG);
+        }
+        repository.insertCaseNote(
+            event.caseReference(),
+            currentUserName.name(),
+            Instant.now(clock),
+            note
+        );
+        return SubmitResponse.defaultResponse();
+    }
+
+    AboutToStartOrSubmitResponse<TecCase, CaseState> validateCaseNote(
+        CaseDetails<TecCase, CaseState> details,
+        CaseDetails<TecCase, CaseState> detailsBefore
+    ) {
+        TecCase data = details.getData();
+        String note = data == null ? null : data.getNote();
+        if (note != null && note.length() > NOTE_MAX_LENGTH) {
+            return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
+                .errorMessageOverride(NOTE_TOO_LONG)
+                .build();
+        }
+        return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
+            .data(withoutUnvalidatableDisplayFields(data))
+            .build();
+    }
+
     private SubmitResponse<CaseState> enterGeneralApplication(EventPayload<TecCase, CaseState> event) {
         GeneralApplicationEntry entry = event.caseData().getGeneralApplication();
         validateGeneralApplicationForSubmit(entry);
@@ -1137,10 +1203,13 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
             .pageLabel("Which application do these documents relate to?")
             .showCondition("showRelatedApplications=\"Yes\"")
             .mandatory(TecCase::getRelatedApplication)
-            .page("uploadAdditionalInformation")
+            .page("uploadAdditionalInformation", this::validateAdditionalInformation)
             .pageLabel("Upload additional information")
             .readonly(TecCase::getShowRelatedApplications, NEVER_SHOW, true)
-            .mandatory(TecCase::getAdditionalInformation);
+            // ExUI renders a mandatory collection's required error as soon as the page
+            // opens, while the collection is still empty. Keep the field optional in the
+            // definition and require a file when Continue is clicked.
+            .optional(TecCase::getAdditionalInformation);
     }
 
     private TecCase startUploadAdditionalInformation(EventPayload<TecCase, CaseState> event) {
@@ -1158,9 +1227,41 @@ public class TecCaseConfiguration implements CCDConfig<TecCase, CaseState, UserR
         return withoutUnvalidatableDisplayFields(data);
     }
 
+    AboutToStartOrSubmitResponse<TecCase, CaseState> validateAdditionalInformation(
+        CaseDetails<TecCase, CaseState> details,
+        CaseDetails<TecCase, CaseState> detailsBefore
+    ) {
+        TecCase data = details.getData();
+        if (!hasCompleteAdditionalInformation(data)) {
+            return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
+                .errorMessageOverride(ADDITIONAL_INFORMATION_REQUIRED)
+                .build();
+        }
+        return AboutToStartOrSubmitResponse.<TecCase, CaseState>builder()
+            .data(withoutUnvalidatableDisplayFields(data))
+            .build();
+    }
+
+    private static boolean hasCompleteAdditionalInformation(TecCase data) {
+        List<ListValue<Document>> documents = data == null ? null : data.getAdditionalInformation();
+        if (documents == null || documents.isEmpty()) {
+            return false;
+        }
+        for (ListValue<Document> item : documents) {
+            Document document = item == null ? null : item.getValue();
+            if (document == null
+                || isBlank(document.getUrl())
+                || isBlank(document.getBinaryUrl())
+                || isBlank(document.getFilename())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private SubmitResponse<CaseState> uploadAdditionalInformation(EventPayload<TecCase, CaseState> event) {
         List<ListValue<Document>> documents = event.caseData().getAdditionalInformation();
-        if (documents == null || documents.isEmpty()) {
+        if (!hasCompleteAdditionalInformation(event.caseData())) {
             throw new IllegalArgumentException("additionalInformation is required");
         }
         long caseReference = event.caseReference();

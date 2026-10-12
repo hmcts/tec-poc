@@ -1,5 +1,6 @@
 package uk.gov.hmcts.reform.tecpoc.ccd;
 
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.List;
@@ -13,6 +14,7 @@ import uk.gov.hmcts.ccd.sdk.api.CCD;
 import uk.gov.hmcts.ccd.sdk.type.CaseLink;
 import uk.gov.hmcts.ccd.sdk.type.Document;
 import uk.gov.hmcts.ccd.sdk.type.ListValue;
+import uk.gov.hmcts.reform.tecpoc.config.ClockConfiguration;
 
 @Component
 @RequiredArgsConstructor
@@ -93,6 +95,8 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
         // via CCD case_link / getLinkedCases). PCN caseLinks stay empty.
         tecCase.setCaseLinks(List.of());
         tecCase.setGeneralApplication(null);
+        tecCase.setNote(null);
+        tecCase.setCaseNotes(toCaseNotes(repository.findCaseNotes(request.caseRef())));
         tecCase.setWarrantAuthorisations(
             toWarrantAuthorisations(repository.findWarrantAuthorisations(request.caseRef()))
         );
@@ -154,6 +158,12 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
             .toList();
     }
 
+    static List<ListValue<CaseNote>> toCaseNotes(List<TecCaseNote> notes) {
+        return notes.stream()
+            .map(TecCaseView::toCaseNoteListValue)
+            .toList();
+    }
+
     static List<ListValue<GeneralApplication>> toGeneralApplications(
         List<TecCaseGeneralApplication> applications
     ) {
@@ -168,6 +178,17 @@ public class TecCaseView implements CaseView<TecCase, CaseState> {
         return authorisations.stream()
             .map(TecCaseView::toWarrantAuthorisationListValue)
             .toList();
+    }
+
+    private static ListValue<CaseNote> toCaseNoteListValue(TecCaseNote note) {
+        CaseNote value = new CaseNote();
+        value.setCreatedBy(note.createdBy());
+        value.setCreatedOn(LocalDateTime.ofInstant(note.createdOn(), ClockConfiguration.UK_ZONE_ID));
+        value.setNote(note.note());
+        return ListValue.<CaseNote>builder()
+            .id(note.id().toString())
+            .value(value)
+            .build();
     }
 
     private static ListValue<GeneralApplication> toGeneralApplicationListValue(

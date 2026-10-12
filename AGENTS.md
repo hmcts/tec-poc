@@ -11,6 +11,7 @@ Prefer these files over inventing CCD / ExUI topology. They are the GOV.UK Tech 
 | State and event model (hand-edited diagrams) | [`tech_docs/source/state-event-model.html.md.erb`](tech_docs/source/state-event-model.html.md.erb) |
 | Next step events matrix (worksheet) | [`tech_docs/source/next-step-events-matrix.html.md.erb`](tech_docs/source/next-step-events-matrix.html.md.erb) |
 | Enter a general application | [`tech_docs/source/enter-general-application.html.md.erb`](tech_docs/source/enter-general-application.html.md.erb) |
+| Add a case note | [`tech_docs/source/add-case-note.html.md.erb`](tech_docs/source/add-case-note.html.md.erb) |
 | CFTLib / database ownership | [`tech_docs/source/cftlib-shared-database.html.md.erb`](tech_docs/source/cftlib-shared-database.html.md.erb) |
 | Penalty charge numbers (format and check digit) | [`tech_docs/source/pcn-number.html.md.erb`](tech_docs/source/pcn-number.html.md.erb) |
 | Local `bin/` scripts inventory | [`tech_docs/source/local-scripts.html.md.erb`](tech_docs/source/local-scripts.html.md.erb) |

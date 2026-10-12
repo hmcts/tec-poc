@@ -394,6 +394,17 @@ public class TecCase {
     private GeneralApplicationEntry generalApplication;
 
     /**
+     * Event-only text for {@code addCaseNote}. Cleared by {@link TecCaseView}.
+     */
+    @CCD(
+        label = "Note",
+        hint = "Add note detail, including relevant dates and people involved",
+        typeOverride = FieldType.TextArea,
+        searchable = false
+    )
+    private String note;
+
+    /**
      * General applications shown on Case details. Populated by {@link TecCaseView}.
      */
     @CCD(
@@ -403,6 +414,17 @@ public class TecCase {
     )
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<ListValue<GeneralApplication>> generalApplications;
+
+    /**
+     * Case notes shown on the Notes tab. Populated by {@link TecCaseView}.
+     */
+    @CCD(
+        label = "Note",
+        typeOverride = FieldType.Collection,
+        typeParameterOverride = "CaseNote",
+        searchable = false
+    )
+    private List<ListValue<CaseNote>> caseNotes;
 
     /**
      * Warrant authorisations shown on Case details. Populated by {@link TecCaseView}.

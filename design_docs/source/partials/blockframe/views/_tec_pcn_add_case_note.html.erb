@@ -1,0 +1,32 @@
+<%#
+  TEC PCN — Add a case note (clerk Next step).
+  Locals:
+    caption — frame label
+    page    — :note | :summary
+%>
+<% caption = (defined?(caption) && caption) ? caption : "Event — Add a case note" %>
+<% page = (defined?(page) && page) ? page.to_sym : :note %>
+<% body_parts = ['<div class="bf-form">'] %>
+<% case page
+when :note %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Add a case note", callout: true }),
+  partial("partials/blockframe/field", locals: {
+    type: :textarea,
+    label: "Note",
+    title: "Note — Add note detail, including relevant dates and people involved"
+  })
+]) %>
+<% when :summary %>
+<% body_parts.concat([
+  partial("partials/blockframe/text", locals: { size: :title, label: "Check your answers", callout: true }),
+  '<div class="bf-kv" title="Note"><span class="bf-kv__key">Note</span><span class="bf-kv__value bf-callout">Spoke to the respondent</span></div>'
+]) %>
+<% end %>
+<% continue_label = (page == :summary) ? "Submit" : "Continue" %>
+<% body_parts.concat([
+  %(<div class="bf-actions"><span class="bf-action bf-action--secondary" title="Previous"></span><span class="bf-action bf-action--primary" title="#{continue_label}"></span></div>)
+]) %>
+<% body_parts << "</div>" %>
+<% body = body_parts.join %>
+<%= partial "partials/blockframe/page", locals: { caption: caption, show_tabs: false, body: body } %>

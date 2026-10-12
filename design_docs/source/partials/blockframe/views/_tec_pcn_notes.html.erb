@@ -1,0 +1,15 @@
+<%#
+  TEC PCN — Notes tab. Clerk and system only.
+  Locals: caption, highlight_tab
+%>
+<% caption = (defined?(caption) && caption) ? caption : "TEC PCN — Notes" %>
+<% highlight_tab = (defined?(highlight_tab) && highlight_tab) ? highlight_tab : nil %>
+<% body = [
+  partial("partials/blockframe/text", locals: { size: :title, label: "Notes" }),
+  '<div class="bf-table" title="Case notes table">',
+  '<div class="bf-table__head" title="Table header"><span class="bf-table__cell bf-table__cell--head" title="Created by (column)">Created by</span><span class="bf-table__cell bf-table__cell--head" title="Created on (column)">Created on</span><span class="bf-table__cell bf-table__cell--head bf-table__cell--wide" title="Note (column)">Note</span></div>',
+  '<div class="bf-table__row" title="Note row"><span class="bf-table__cell"><span class="bf-table__value bf-table__value--callout" title="Created by">Ada Clerk</span></span><span class="bf-table__cell"><span class="bf-table__bar" style="width: 78%" title="Created on value"></span></span><span class="bf-table__cell bf-table__cell--wide"><span class="bf-table__value" title="Note">Spoke to the respondent</span></span></div>',
+  '<div class="bf-table__row" title="Note row"><span class="bf-table__cell"><span class="bf-table__bar" style="width: 62%" title="Created by value"></span></span><span class="bf-table__cell"><span class="bf-table__bar" style="width: 70%" title="Created on value"></span></span><span class="bf-table__cell bf-table__cell--wide"><span class="bf-table__bar" style="width: 84%" title="Note value"></span></span></div>',
+  '</div>'
+].join %>
+<%= partial "partials/blockframe/page", locals: { caption: caption, active: :notes, body: body, highlight_tab: highlight_tab } %>

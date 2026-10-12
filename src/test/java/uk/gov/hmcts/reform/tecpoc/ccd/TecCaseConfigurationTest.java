@@ -1,6 +1,7 @@
 package uk.gov.hmcts.reform.tecpoc.ccd;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -10,7 +11,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,9 +41,13 @@ class TecCaseConfigurationTest {
     @BeforeEach
     void setUp() {
         repository = mock(TecCaseRepository.class);
+        CurrentUserName currentUserName = mock(CurrentUserName.class);
+        when(currentUserName.name()).thenReturn("Ada Clerk");
         configuration = new TecCaseConfiguration(
             repository,
-            mock(BatchCaseRepository.class)
+            mock(BatchCaseRepository.class),
+            Clock.fixed(Instant.parse("2026-01-15T12:00:00Z"), ZoneOffset.UTC),
+            currentUserName
         );
     }
 
@@ -435,6 +443,47 @@ class TecCaseConfigurationTest {
     }
 
     @Test
+    void validateAdditionalInformationRejectsAnEmptyUpload() {
+        TecCase data = new TecCase();
+        data.setAdditionalInformation(List.of());
+
+        AboutToStartOrSubmitResponse<TecCase, CaseState> response = validateAdditionalInformation(data);
+
+        assertThat(response.getErrorMessageOverride())
+            .isEqualTo(TecCaseConfiguration.ADDITIONAL_INFORMATION_REQUIRED);
+    }
+
+    @Test
+    void validateAdditionalInformationRejectsADocumentWithNoFile() {
+        TecCase data = new TecCase();
+        data.setAdditionalInformation(List.of(
+            ListValue.<Document>builder().value(new Document()).build()
+        ));
+
+        AboutToStartOrSubmitResponse<TecCase, CaseState> response = validateAdditionalInformation(data);
+
+        assertThat(response.getErrorMessageOverride())
+            .isEqualTo(TecCaseConfiguration.ADDITIONAL_INFORMATION_REQUIRED);
+    }
+
+    @Test
+    void validateAdditionalInformationAcceptsAnUploadedFile() {
+        TecCase data = new TecCase();
+        data.setAdditionalInformation(List.of(
+            ListValue.<Document>builder().value(document("witness.pdf")).build()
+        ));
+        data.setFlagLauncher(new FlagLauncher());
+        data.setCaseFlags(new Flags());
+
+        AboutToStartOrSubmitResponse<TecCase, CaseState> response = validateAdditionalInformation(data);
+
+        assertThat(response.getErrorMessageOverride()).isNull();
+        assertThat(response.getData().getFlagLauncher()).isNull();
+        assertThat(response.getData().getCaseFlags()).isNull();
+        assertThat(response.getData().getAdditionalInformation()).hasSize(1);
+    }
+
+    @Test
     void enterGeneralApplicationRejectsUnpaidFee() {
         GeneralApplicationEntry entry = adjournmentEntry(LocalDate.now().minusDays(1));
         entry.setFeeReceived(YesNo.NO);
@@ -488,6 +537,59 @@ class TecCaseConfigurationTest {
 
         assertThat(response.getErrorMessageOverride())
             .isEqualTo("You must request payment from the applicant before entering this application");
+    }
+
+    @Test
+    void addCaseNotePersistsAuthorAndTimeAndLeavesStateUnchanged() {
+        TecCase data = new TecCase();
+        data.setNote("Spoke to the respondent");
+
+        SubmitResponse<CaseState> response = addCaseNote(20L, data);
+
+        verify(repository).insertCaseNote(
+            20L,
+            "Ada Clerk",
+            Instant.parse("2026-01-15T12:00:00Z"),
+            "Spoke to the respondent"
+        );
+        assertThat(response.getState()).isNull();
+    }
+
+    @Test
+    void addCaseNoteRejectsANoteLongerThan500Characters() {
+        TecCase data = new TecCase();
+        data.setNote("n".repeat(TecCaseConfiguration.NOTE_MAX_LENGTH + 1));
+
+        assertThatThrownBy(() -> addCaseNote(21L, data))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage(TecCaseConfiguration.NOTE_TOO_LONG);
+
+        verify(repository, never()).insertCaseNote(anyLong(), any(), any(), any());
+    }
+
+    @Test
+    void validateCaseNoteStripsFlagLauncher() {
+        TecCase data = new TecCase();
+        data.setNote("A short note");
+        data.setFlagLauncher(new FlagLauncher());
+        data.setCaseFlags(new Flags());
+
+        AboutToStartOrSubmitResponse<TecCase, CaseState> response = validateCaseNote(data);
+
+        assertThat(response.getErrorMessageOverride()).isNull();
+        assertThat(response.getData().getFlagLauncher()).isNull();
+        assertThat(response.getData().getCaseFlags()).isNull();
+        assertThat(response.getData().getNote()).isEqualTo("A short note");
+    }
+
+    @Test
+    void validateCaseNoteRejectsMoreThan500Characters() {
+        TecCase data = new TecCase();
+        data.setNote("n".repeat(TecCaseConfiguration.NOTE_MAX_LENGTH + 1));
+
+        AboutToStartOrSubmitResponse<TecCase, CaseState> response = validateCaseNote(data);
+
+        assertThat(response.getErrorMessageOverride()).isEqualTo(TecCaseConfiguration.NOTE_TOO_LONG);
     }
 
     private static GeneralApplicationEntry adjournmentEntry(LocalDate dateReceived) {
@@ -555,6 +657,29 @@ class TecCaseConfigurationTest {
             .binaryUrl("http://localhost:4455/cases/documents/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/binary")
             .filename(filename)
             .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private SubmitResponse<CaseState> addCaseNote(long caseReference, TecCase data) {
+        return (SubmitResponse<CaseState>) ReflectionTestUtils.invokeMethod(
+            configuration,
+            "addCaseNote",
+            new EventPayload<>(caseReference, data, null)
+        );
+    }
+
+    private AboutToStartOrSubmitResponse<TecCase, CaseState> validateCaseNote(TecCase data) {
+        return configuration.validateCaseNote(
+            CaseDetails.<TecCase, CaseState>builder().data(data).build(),
+            null
+        );
+    }
+
+    private AboutToStartOrSubmitResponse<TecCase, CaseState> validateAdditionalInformation(TecCase data) {
+        return configuration.validateAdditionalInformation(
+            CaseDetails.<TecCase, CaseState>builder().data(data).build(),
+            null
+        );
     }
 
     @SuppressWarnings("unchecked")

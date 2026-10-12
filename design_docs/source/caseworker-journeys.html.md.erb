@@ -7,6 +7,22 @@ weight: 50
 
 Journey boards for TEC caseworker review work. Frames reuse [TEC PCN blockframes](/tec-pcn-blockframes.html) and [ExUI form elements](/exui-form-elements.html). Yellow outline (`highlight`) and link-blue (`callout`) mark the control that starts each step. Hover blocks for element names.
 
+## Journey: Add a case note
+
+The clerk is already on the **Case details** tab of a TEC PCN case, in any case state. They choose **Add a case note** from the **Next step** dropdown and select **Go**. The note is required and limited to 500 characters. After **Submit** the case state does not change, and the note appears on the **Notes** tab. Local authorities do not see that tab.
+
+How the event is stored is described in the tech docs: [Add a case note](http://localhost:4568/add-case-note.html).
+
+<div class="bf-journey">
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_case_details", locals: { caption: "1. TEC PCN — Case details", highlight_tab: :case_details, highlight_next_step: true, next_step_event: "Add a case note" } %><p class="bf-journey__note">On the <strong>Case details</strong> tab they open <strong>Next step</strong>, choose <strong>Add a case note</strong>, and select <strong>Go</strong>.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Go</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_add_case_note", locals: { caption: "2. Add a case note", page: :note } %><p class="bf-journey__note">They enter the note, including relevant dates and people involved.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Continue</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_add_case_note", locals: { caption: "3. Check your answers", page: :summary } %><p class="bf-journey__note">They check the note and select <strong>Submit</strong>. The case state does not change.</p></div>
+<div class="bf-journey__arrow"><span aria-hidden="true">→</span><span class="bf-journey__arrow-label">Submit</span></div>
+<div class="bf-journey__step"><%= partial "partials/blockframe/views/tec_pcn_notes", locals: { caption: "4. TEC PCN — Notes", highlight_tab: :notes } %><p class="bf-journey__note">The <strong>Notes</strong> tab lists the note with who created it and when. Older notes stay above newer ones.</p></div>
+</div>
+
 ## Journey: Enter a general application
 
 The clerk is already on the **Case details** tab of a TEC PCN case, in any case state. They choose **Enter a general application** from the **Next step** dropdown and select **Go**. The illustrated path is an adjournment made without notice, where the parties do not consent, so every page is shown. Hearing date is skipped unless the type is Adjourn. The refer-to-judge page is skipped unless the parties do not consent and the application is without notice. Something else adds a categories text area on Application details.

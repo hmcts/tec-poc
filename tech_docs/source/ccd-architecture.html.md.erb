@@ -97,7 +97,8 @@ ExUI Case list / Find case expose a **case type** filter. Fresh sessions prefera
 (import order + alphabetical id); ExUI may remember the last selection in `localStorage` — see
 [exui-navigation](/exui-navigation.html).
 
-Most system events use `[STATE]="NEVER_SHOW"`. Clerk-visible PCN events include `enterGeneralApplication`
+Most system events use `[STATE]="NEVER_SHOW"`. Clerk-visible PCN events include `addCaseNote`,
+`enterGeneralApplication`
 and `uploadAdditionalInformation`
 (every state), `verifyFormValidation`,
 `reviewOotRefusalDecision` (only in `PENDING_REFUSAL_DECISION`),
@@ -134,6 +135,7 @@ The event handlers update TEC-owned data as follows:
 | `applyWarrantAuthorisation` | `warrantAuthorisation` (date of issue, date of expiry, status) | Inserts `public.tec_case_warrant_authorisation` | `active` → `WARRANT_AUTHORISATION_ISSUED`; `expired` → `WARRANT_AUTHORISATION_EXPIRED`; `cancelled` → unchanged |
 | `setCaseState` | `targetCaseState` | None (prototype helper) | the requested `CaseState` |
 | `enterGeneralApplication` | General application form (applicant, type, fee, consent, uploaded N244) | Inserts `public.tec_case_general_application` with state `GEN_APP_ISSUED`; N244 goes to `tec_case_document` category `applications`, related evidence to `uncategorisedDocuments` | unchanged |
+| `addCaseNote` | Mandatory note, 500 characters | Inserts `public.tec_case_note` (`created_by` from IDAM, `created_on` in UTC). The Notes tab is rebuilt by `TecCaseView` | unchanged |
 | `uploadAdditionalInformation` | Document collection. When the case has general applications, a dropdown of those applications plus **Not related to an application** | Each file is inserted into `public.tec_case_document`. Not related, or a case with no applications: category `uncategorisedDocuments` and no application link. A chosen application: category `applications`, `general_application_id` set, filename `{basename} GA{rank}.{ext}` | unchanged |
 
 `attachCaseFileDocument` is system-only and hidden from ExUI (`NEVER_SHOW`). Local uploads use
@@ -206,6 +208,8 @@ when an active warrant authorisation is already on the case; otherwise the case 
 `PENDING_REFUSAL_DECISION` because the state model’s no-warrant destination (`ELIGIBLE_FOR_WARRANT`)
 is not a `CaseState`.
 
+`addCaseNote` is a clerk Next step in every PCN state. It appends one row to `tec_case_note` and does not change PCN state. The Notes tab is described in [Add a case note](/add-case-note.html). The caseworker journey starts from the Case details **Next step** dropdown: [Add a case note](http://localhost:4567/caseworker-journeys.html#journey-add-a-case-note).
+
 `enterGeneralApplication` is a clerk Next step in every PCN state. There is no feature flag.
 Submit stores the application as `GEN_APP_ISSUED` and does not change PCN state. The form, validation,
 `tec_case_general_application` table, and how Case details and Case File View are rebuilt are described
@@ -273,7 +277,8 @@ SDK does not prepend it):
   an existing general application is stored with `general_application_id` and category
   `applications`, and the filename gains `GA{rank}` so the folder listing shows which
   application it belongs to.
-- **History**: CCD case-event history (`CaseHistory` / `caseHistory`), placed after Case File View.
+- **Notes**: tab after Case File View, granted to the clerk and system roles only. `TecCaseView` rebuilds `caseNotes` from `tec_case_note`, oldest first, with `created_on` shown in `Europe/London`. The event textarea is not shown here. Local authorities do not see this tab. See [Add a case note](/add-case-note.html).
+- **History**: CCD case-event history (`CaseHistory` / `caseHistory`), placed after Notes.
 - **Linked Cases**: ExUI `ComponentLauncher` + `caseLinks` collection (`#ARGUMENT(LinkedCases)`).
   Batch links are owned by the batch case (see below); a PCN can appear under ExUI **linked from**
   for more than one batch (e.g. registration and warrant auth) after each batch's `linkPcnCases`

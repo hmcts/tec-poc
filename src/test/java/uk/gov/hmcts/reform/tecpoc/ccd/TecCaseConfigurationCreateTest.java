@@ -7,6 +7,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -20,7 +22,12 @@ class TecCaseConfigurationCreateTest {
     @BeforeEach
     void setUp() {
         repository = mock(TecCaseRepository.class);
-        configuration = new TecCaseConfiguration(repository, mock(BatchCaseRepository.class));
+        configuration = new TecCaseConfiguration(
+            repository,
+            mock(BatchCaseRepository.class),
+            Clock.systemUTC(),
+            mock(CurrentUserName.class)
+        );
     }
 
     @Test

@@ -5,6 +5,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -613,6 +614,40 @@ public class TecCaseRepository {
             .addValue("withoutNotice", yesNoName(entry.getWithoutNotice()))
             .addValue("state", GeneralApplicationState.GEN_APP_ISSUED.name()));
         return id;
+    }
+
+    public UUID insertCaseNote(long caseReference, String createdBy, Instant createdOn, String note) {
+        UUID id = UUID.randomUUID();
+        database.update("""
+            insert into tec_case_note (
+                id, case_reference, created_on, created_by, note
+            ) values (
+                :id, :caseReference, :createdOn, :createdBy, :note
+            )
+            """, new MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("caseReference", caseReference)
+            .addValue("createdOn", Timestamp.from(createdOn))
+            .addValue("createdBy", createdBy)
+            .addValue("note", note));
+        return id;
+    }
+
+    public List<TecCaseNote> findCaseNotes(long caseReference) {
+        return database.query("""
+            select id, created_on, created_by, note
+              from tec_case_note
+             where case_reference = :caseReference
+             order by created_on asc, id asc
+            """, Map.of("caseReference", caseReference), (resultSet, rowNumber) -> {
+                Timestamp createdOn = resultSet.getTimestamp("created_on");
+                return new TecCaseNote(
+                    resultSet.getObject("id", UUID.class),
+                    createdOn == null ? null : createdOn.toInstant(),
+                    resultSet.getString("created_by"),
+                    resultSet.getString("note")
+                );
+            });
     }
 
     public List<TecCaseGeneralApplication> findGeneralApplications(long caseReference) {
