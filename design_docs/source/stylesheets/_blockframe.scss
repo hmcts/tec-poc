@@ -1167,7 +1167,8 @@ $bf-link-callout: #1a65a6;
   @include bf-bar-or-text($bf-text, 6px, 5px, 90%, 400, 100%);
 }
 
-// Event form column (Validate OOT application): half the page, compact fields.
+// Event form column: half the page, matching ExUI .width-50. Compact fields.
+// Long questions wrap inside the column instead of stretching the page.
 .bf-form {
   display: flex;
   flex-direction: column;
@@ -1175,6 +1176,16 @@ $bf-link-callout: #1a65a6;
   width: 50%;
   max-width: 50%;
   min-width: 0;
+
+  .bf-text--title:not(:empty),
+  .bf-text--medium:not(:empty),
+  .bf-text--line:not(:empty),
+  .bf-text--short:not(:empty) {
+    white-space: normal;
+    max-width: 100%;
+    overflow: visible;
+    text-overflow: unset;
+  }
 
   .bf-field {
     width: 100%;
@@ -1189,8 +1200,54 @@ $bf-link-callout: #1a65a6;
     }
 
     &:not(:empty) {
+      display: block;
+      width: 100%;
       max-width: 100%;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: unset;
+      line-height: 1.25;
     }
+  }
+
+  .bf-field__option {
+    align-items: flex-start;
+  }
+
+  .bf-field__option-text:not(:empty) {
+    flex-shrink: 1;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    max-width: none;
+    line-height: 1.3;
+  }
+
+  .bf-kv {
+    align-items: flex-start;
+  }
+
+  .bf-kv__key:not(:empty),
+  .bf-kv__value:not(:empty) {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    height: auto;
+    line-height: 1.25;
+  }
+
+  .bf-kv__value:not(:empty) {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  // ExUI sizes Previous / Continue to their labels inside the half-width column.
+  .bf-action--secondary:empty {
+    width: 33px;
+  }
+
+  .bf-action--primary:empty {
+    width: 39px;
   }
 
   .bf-field__input {

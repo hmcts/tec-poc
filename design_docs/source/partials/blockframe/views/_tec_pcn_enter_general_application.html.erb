@@ -6,7 +6,7 @@
 %>
 <% caption = (defined?(caption) && caption) ? caption : "Event — Enter a general application" %>
 <% page = (defined?(page) && page) ? page.to_sym : :details %>
-<% body_parts = ['<div class="bf-form bf-form--full">'] %>
+<% body_parts = ['<div class="bf-form">'] %>
 <% case page
 when :details %>
 <% body_parts.concat([
